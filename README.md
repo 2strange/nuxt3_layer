@@ -8,10 +8,11 @@ Jedes Projekt **erbt** den Layer via `extends:` und überschreibt nur was abweic
 Updates am Layer → `npm update` / `git pull` in jedem Projekt → alle profitieren
 gleichzeitig.
 
-> **Stand (2026-05-25):** aktiv & canonical reference. Eigener Git-Repo
-> (Branch `claude` für Claude-getriebene Änderungen, `main` für stabilen Stand).
-> Erster Consumer: `~/Sites/moja-lms`. Begleit-Docs für Claude/Backlog siehe
-> `CLAUDE.md` + `BACKLOG.md` in diesem Ordner.
+> **Stand (2026-05-27):** aktiv & canonical reference. Public GitHub-Repo
+> [`github.com/2strange/nuxt3_layer`](https://github.com/2strange/nuxt3_layer)
+> (Branch `main` = stabil, `claude` = Claude-getriebene Änderungen). Konsumieren
+> via `extends: ['github:2strange/nuxt3_layer#main']`. Erster Consumer:
+> `~/Sites/moja-lms`. Begleit-Docs siehe `CLAUDE.md` + `BACKLOG.md`.
 
 ---
 
