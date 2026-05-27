@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "home": "Home",
+    "login": "Login",
+    "logout": "Logout",
+    "admin": "Admin"
+  },
+  "auth": {
+    "loginTitle": "Login",
+    "email": "Email",
+    "password": "Password",
+    "loginButton": "Sign in",
+    "forgotPassword": "Forgot password?",
+    "wrongCredentials": "Wrong credentials",
+    "loginError": "Login failed",
+    "loggedIn": "Signed in",
+    "loggedOut": "Signed out"
+  },
+  "actions": {
+    "confirm": {
+      "headline": "Really delete?",
+      "item": "Item",
+      "text": "This action cannot be undone."
+    }
+  },
+  "errors": {
+    "forbidden": "Forbidden",
+    "notFound": "Page not found"
+  },
+  "common": {
+    "search": "Search",
+    "new": "New",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "loadMore": "Load more",
+    "loading": "Loading …"
+  },
+  "states": {
+    "empty": "No entries yet.",
+    "emptyOf": "No {model} yet."
+  }
+}

@@ -1,0 +1,21 @@
+@use 'variables';
+
+html, body { margin: 0; padding: 0; }
+
+.corset {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px;
+
+  &.xs { max-width: 480px; }
+  &.sm { max-width: 720px; }
+  &.md { max-width: 960px; }
+  &.lg { max-width: 1280px; }
+}
+
+.section {
+  padding: 32px 0;
+  &.sctn-xxl { padding: 96px 0; }
+}
+
+.press { letter-spacing: 0.05em; text-transform: uppercase; }

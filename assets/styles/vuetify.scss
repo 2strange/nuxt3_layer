@@ -1,0 +1,4 @@
+@use 'variables';
+@forward 'vuetify/settings' with (
+  $body-font-family: 'Inter, system-ui, -apple-system, sans-serif'
+);

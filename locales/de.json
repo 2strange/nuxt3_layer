@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "home": "Startseite",
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "admin": "Admin"
+  },
+  "auth": {
+    "loginTitle": "Login",
+    "email": "Email",
+    "password": "Passwort",
+    "loginButton": "anmelden",
+    "forgotPassword": "Passwort vergessen?",
+    "wrongCredentials": "Falsche Zugangsdaten",
+    "loginError": "Fehler beim Anmelden",
+    "loggedIn": "Du bist angemeldet",
+    "loggedOut": "Abgemeldet"
+  },
+  "actions": {
+    "confirm": {
+      "headline": "Wirklich löschen?",
+      "item": "Element",
+      "text": "Diese Aktion kann nicht rückgängig gemacht werden."
+    }
+  },
+  "errors": {
+    "forbidden": "Zugriff verweigert",
+    "notFound": "Seite nicht gefunden"
+  },
+  "common": {
+    "search": "Suchen",
+    "new": "Neu",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "back": "Zurück",
+    "loadMore": "Mehr laden",
+    "loading": "Lädt …"
+  },
+  "states": {
+    "empty": "Noch keine Einträge vorhanden.",
+    "emptyOf": "Noch keine {model} vorhanden."
+  }
+}
