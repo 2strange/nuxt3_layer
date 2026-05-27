@@ -23,7 +23,7 @@ export default defineNuxtConfig({
       nuxt.hooks.hook('vite:extendConfig', async (config) => {
         const vuetify = (await import('vite-plugin-vuetify')).default
         config.plugins = config.plugins || []
-        config.plugins.push(vuetify({ autoImport: true, styles: { configFile: 'assets/styles/vuetify.scss' } }))
+        config.plugins.push(vuetify({ autoImport: true, styles: { configFile: resolve('./assets/styles/vuetify.scss') } }))
       })
     },
   ],
