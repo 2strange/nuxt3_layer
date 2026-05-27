@@ -1,6 +1,6 @@
 {
   "name": "nuxt3-layer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Shared Nuxt 3 base layer — auth, Vuetify 3, Pinia, helpers, composables. Extend via `extends: ['../nuxt3_layer']` in your project's nuxt.config.ts.",
