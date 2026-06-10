@@ -8,11 +8,13 @@ Jedes Projekt **erbt** den Layer via `extends:` und überschreibt nur was abweic
 Updates am Layer → `npm update` / `git pull` in jedem Projekt → alle profitieren
 gleichzeitig.
 
-> **Stand (2026-05-27):** aktiv & canonical reference. Public GitHub-Repo
+> **Stand (2026-06-10):** aktiv & canonical reference, aktuell **v0.1.2**.
+> Public GitHub-Repo
 > [`github.com/2strange/nuxt3_layer`](https://github.com/2strange/nuxt3_layer)
 > (Branch `main` = stabil, `claude` = Claude-getriebene Änderungen). Konsumieren
-> via `extends: ['github:2strange/nuxt3_layer#main']`. Erster Consumer:
-> `~/Sites/moja-lms`. Begleit-Docs siehe `CLAUDE.md` + `BACKLOG.md`.
+> via **Tag-Pin** `extends: ['github:2strange/nuxt3_layer#v0.1.2']` (empfohlen,
+> statt `#main` — s.u.). Erster Consumer: `~/Sites/moja-lms`. Begleit-Docs siehe
+> `CLAUDE.md` + `BACKLOG.md`, Release-Historie in `CHANGELOG.md`.
 
 ---
 
@@ -76,11 +78,21 @@ nuxt3_layer/
 ```ts
 // my-project/nuxt.config.ts
 export default defineNuxtConfig({
-  extends: ['../nuxt3_layer'],  // lokaler Pfad (Monorepo-Sibling)
-  // oder: extends: ['github:2strange/nuxt3_layer#main']
+  extends: ['github:2strange/nuxt3_layer#v0.1.2'],  // Tag-Pin (empfohlen)
+  // oder: extends: ['../nuxt3_layer']  // lokaler Pfad (Monorepo-Sibling, s. Hinweis unter 7.)
   // oder: npm-Paket nach Publish: extends: ['@your-scope/nuxt3-layer']
 })
 ```
+
+> **Empfehlung: auf den Release-Tag pinnen** (`#v0.1.2`), nicht auf `#main`.
+> `#main` bewegt sich unter deinen Builds weg — ein Layer-Push kann ein
+> Konsumprojekt unangekündigt brechen. Mit Tag-Pin sind Builds reproduzierbar;
+> Updates = bewusster Tag-Wechsel (Changelog checken → Pin hochziehen).
+
+> **Consumer-Kontrakt: `assets/styles/app.scss` ist Pflicht.** Der Layer lädt
+> `~/assets/styles/app.scss` über seine `css:`-Liste, und `~` resolved dabei im
+> **Konsumprojekt** (srcDir), nicht im Layer. Das Konsumprojekt MUSS diese Datei
+> also bereitstellen (eine leere Datei reicht) — sonst bricht der Build.
 
 ### 2. Projektspezifische runtimeConfig setzen
 
@@ -154,11 +166,22 @@ selbst mit. Bei Layer als lokalem Pfad reicht es, die Layer-Deps in dein
 
 Bei npm-Publish reicht ein simples `npm install @your-scope/nuxt3-layer`.
 
-> **Hinweis (v0.1.2+):** `@nuxt/kit` und `vite-plugin-vuetify` sind jetzt in
-> `dependencies` (nicht mehr `devDependencies`), weil die Layer-`nuxt.config.ts`
-> sie zur Config-Eval-Zeit importiert. Consumer brauchen **keinen** `postinstall`-
-> Workaround mehr (`NODE_PATH=./node_modules nuxt prepare`). Falls du diesen Hack
-> noch in deinem Projekt hast — einfach entfernen.
+> **Hinweis (v0.1.2+):** `@nuxt/kit`, `vite-plugin-vuetify` und `sass-embedded`
+> sind jetzt in `dependencies` (nicht mehr `devDependencies`), weil die
+> Layer-`nuxt.config.ts` sie zur Config-Eval-Zeit importiert bzw. die Layer-SCSS
+> sie zur Consumer-Build-Zeit braucht. Beim Konsum via `github:`-extends oder
+> npm-Paket brauchen Consumer damit **keinen** `postinstall`-Workaround mehr
+> (`NODE_PATH=./node_modules nuxt prepare`) — falls du den Hack noch im Projekt
+> hast, einfach entfernen.
+>
+> **Ausnahme — lokales Pfad-extends auf einen Layer OHNE eigene `node_modules`:**
+> Hier bleibt der Workaround `NODE_PATH=./node_modules nuxt prepare` (bzw. als
+> `postinstall` im Konsumprojekt) **weiterhin nötig**. Das ist per `package.json`
+> prinzipiell nicht lösbar: Node resolved Imports aus der Layer-`nuxt.config.ts`
+> vom **Layer-Pfad** aus nur die Eltern-Verzeichnisse hoch — die `node_modules`
+> des Konsumprojekts liegen aber in einem Geschwister-Zweig und werden so nie
+> gefunden. Abhilfe: Layer selbst `npm install`-en (eigene `node_modules`),
+> `NODE_PATH` setzen, oder gleich das `github:`-Tag-Pin-extends nutzen.
 
 ---
 
