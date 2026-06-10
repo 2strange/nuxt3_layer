@@ -24,5 +24,8 @@ export default defineAppConfig({
     de: 'Deutsch',
     en: 'English',
   },
-  cookiesAcceptedKey: 'app_cookies_ok',
+  // Name of the cookie-consent cookie (read/written by useAppStore).
+  // Default = historical hardcoded value, so existing apps keep recognizing
+  // already-set consent cookies without any config (zero-config drop-in).
+  cookiesAcceptedKey: 'slBkngCookiesOK',
 })

@@ -1,6 +1,19 @@
 import { defineStore } from 'pinia'
 import Cookies from 'js-cookie'
 
+// Cookie-consent key — overridable per project via app.config
+// (`cookiesAcceptedKey`). Falls back to the historical default so existing
+// apps keep recognizing already-set consent cookies (zero-config drop-in).
+function cookiesAcceptedKey() {
+  try {
+    const key = useAppConfig()?.cookiesAcceptedKey
+    if (key) return key
+  } catch (e) {
+    // outside of a Nuxt app context (e.g. plain unit test) — use the default
+  }
+  return 'slBkngCookiesOK'
+}
+
 export const useAppStore = defineStore('app', {
   state: () => ({
     drawer: null,
@@ -48,11 +61,11 @@ export const useAppStore = defineStore('app', {
 
     // Cookies
     initCookies() {
-      this.cookiesAccepted = !!Cookies.get('slBkngCookiesOK')
+      this.cookiesAccepted = !!Cookies.get(cookiesAcceptedKey())
     },
     acceptCookies() {
       this.cookiesAccepted = true
-      Cookies.set('slBkngCookiesOK', 'true', { expires: 365 })
+      Cookies.set(cookiesAcceptedKey(), 'true', { expires: 365 })
     },
   },
 })

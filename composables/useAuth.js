@@ -47,7 +47,12 @@ export function useAuth() {
       return auth.user
     } catch (err) {
       log.warn('[auth] fetchUser failed', err)
-      auth.reset()
+      // Only an explicit auth rejection (401/403) invalidates the session.
+      // Network errors / 5xx must NOT nuke the auth state — the token may
+      // still be perfectly valid. (useApi additionally handles 401/402/403
+      // globally with reset + redirect.)
+      const status = err?.response?.status ?? err?.status ?? err?.statusCode
+      if (status === 401 || status === 403) auth.reset()
       return null
     }
   }
