@@ -9,7 +9,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "if command -v nuxt >/dev/null; then nuxt prepare; fi"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
