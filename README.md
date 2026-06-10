@@ -154,6 +154,12 @@ selbst mit. Bei Layer als lokalem Pfad reicht es, die Layer-Deps in dein
 
 Bei npm-Publish reicht ein simples `npm install @your-scope/nuxt3-layer`.
 
+> **Hinweis (v0.1.2+):** `@nuxt/kit` und `vite-plugin-vuetify` sind jetzt in
+> `dependencies` (nicht mehr `devDependencies`), weil die Layer-`nuxt.config.ts`
+> sie zur Config-Eval-Zeit importiert. Consumer brauchen **keinen** `postinstall`-
+> Workaround mehr (`NODE_PATH=./node_modules nuxt prepare`). Falls du diesen Hack
+> noch in deinem Projekt hast — einfach entfernen.
+
 ---
 
 ## Ein **bestehendes Nuxt 2 Projekt** migrieren
