@@ -33,7 +33,9 @@ nuxt3_layer/
 │   ├── useDate.js          # date / dateTime (dayjs)
 │   ├── useFormRules.js     # email/pass/required rules für Vuetify
 │   ├── useEventBus.js      # pub/sub (Vue-2 event_bus Ersatz)
+│   ├── useInfiniteScroll.js # paginiertes Nachladen via v-intersect
 │   ├── useLog.js           # log.debug/info/warn/error
+│   ├── useResourceIndex.js # Index laden, filtern, Liste pflegen
 │   └── useToast.js         # toast.show/success/error
 │
 ├── stores/                 # Pinia
@@ -49,8 +51,15 @@ nuxt3_layer/
 │   ├── vuetify.ts          # Vuetify-Setup mit Default-Theme
 │   └── auth-init.ts        # SSR-safe Cookie-Hydration + User-Fetch
 │
-├── components/
-│   └── AppToast.vue        # globaler Snackbar-Stack
+├── components/             # auto-importiert in Konsumprojekten
+│   ├── AdminFooter.vue     # minimaler Admin-Footer (App-Name + ©Jahr)
+│   ├── AppSpinner.vue      # zentraler Lade-Spinner
+│   ├── AppToast.vue        # globaler Snackbar-Stack
+│   ├── EmptyMsg.vue        # Leer-Zustand mit Icon + Action-Slot
+│   ├── JsonDebug.vue       # dev-only JSON-Inspektor (vue-json-pretty)
+│   ├── LanguageSwitcher.vue # Locale-Menü (i18n setLocale, Route + Cookie)
+│   ├── RichTextEditor.vue  # TipTap-Editor (wysiwyg/markdown) mit Toolbar
+│   └── ToolBar.vue         # Listen-Kopf mit Zähler/Suche/State-Filter
 │
 ├── layouts/
 │   ├── default.vue         # Public mit AppBar
@@ -63,7 +72,7 @@ nuxt3_layer/
 │   └── crew/login.vue      # Login-Page
 │
 ├── services/log.js
-├── utils/                  # api/decoder/finder/txt/timing/style.config
+├── utils/                  # api/decoder/finder/listFilter/txt/timing/style.config
 ├── locales/                # de.json + en.json (Projekte merge'n eigene Keys rein)
 ├── assets/styles/          # vuetify.scss + variables.scss + app.scss
 └── error.vue
@@ -155,14 +164,19 @@ wird gemerged. Einfach `locales/de.json` im Projekt anlegen mit zusätzlichen Ke
 ### 7. `package.json`
 
 Im Projekt nur dein App-spezifisches Zeug; der Layer bringt seine Dependencies
-selbst mit. Bei Layer als lokalem Pfad reicht es, die Layer-Deps in dein
-`package.json` aufzunehmen (`npm install` resolved sie über das Layer-Verzeichnis):
+selbst mit. Bei Layer als lokalem Pfad den Layer als `file:`-Dependency
+aufnehmen, damit `npm install` die Layer-Deps in dein Projekt zieht:
 
 ```json
 {
   "dependencies": { "nuxt3-layer": "file:../nuxt3_layer" }
 }
 ```
+
+**Aber:** der `file:`-Eintrag allein reicht beim lokalen Pfad-extends *nicht* —
+es gilt die NODE_PATH-Ausnahme unten: solange der Layer keine eigenen
+`node_modules` hat, brauchst du im Konsumprojekt weiterhin den Workaround
+`NODE_PATH=./node_modules nuxt prepare` (Details im Hinweis-Block).
 
 Bei npm-Publish reicht ein simples `npm install @your-scope/nuxt3-layer`.
 

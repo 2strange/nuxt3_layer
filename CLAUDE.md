@@ -58,6 +58,10 @@ Bei Breaking Changes → in der README + BACKLOG notieren, Major-Version bumpen.
   `locales/`-Layout). de+en als Default; Projekte ergänzen eigene Keys.
 - **Toast:** eigenes `useToast()`-Composable + `<AppToast>` Component (nutzt
   `v-snackbar`). Ersatz für das alte `@nuxtjs/toast` aus Nuxt 2.
+- **Components (auto-importiert, 8 Stück):** `AdminFooter`, `AppSpinner`,
+  `AppToast`, `EmptyMsg`, `JsonDebug`, `LanguageSwitcher`, `RichTextEditor`,
+  `ToolBar`. Alle generisch — projektspezifische Components gehören ins
+  Konsumprojekt.
 - **Config:** `useConfig()` liest aus Nuxts `useAppConfig()` (merged Layer +
   Projekt) und `useRuntimeConfig().public`. Projekte überschreiben in ihren
   eigenen `nuxt.config.ts` (runtimeConfig) und `app.config.ts` (defineAppConfig).
