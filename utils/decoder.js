@@ -32,37 +32,40 @@ export function assignObj(that) {
 }
 
 export function assignObjNested(that, includes = false) {
+  // Unresolvable refs (missing/sparse include) consistently yield null —
+  // never undefined (previously to-one refs became undefined and to-many
+  // arrays silently collected undefined entries).
+  if (!that) return null
+
   if (!includes) includes = that.included
+  if (that.data && that.data.attributes) that = that.data
 
-  if (that) {
-    if (that.data && that.data.attributes) that = that.data
-
-    if (that && that.relationships && includes) {
-      const rel = {}
-      const keys = Object.keys(that.relationships)
-      for (let i = 0; i < keys.length; i++) {
-        const key = keys[i]
-        const val = that.relationships[key].data
-        if (Array.isArray(val)) {
-          rel[key] = []
-          for (let ii = 0; ii < val.length; ii++) {
-            rel[key].push(assignObjNested(findIncluded(includes, val[ii]), includes))
-          }
-        } else {
-          rel[key] = assignObjNested(findIncluded(includes, val), includes)
+  if (that && that.relationships && includes) {
+    const rel = {}
+    const keys = Object.keys(that.relationships)
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]
+      const val = that.relationships[key].data
+      if (Array.isArray(val)) {
+        rel[key] = []
+        for (let ii = 0; ii < val.length; ii++) {
+          const resolved = assignObjNested(findIncluded(includes, val[ii]), includes)
+          if (resolved != null) rel[key].push(resolved)
         }
+      } else {
+        rel[key] = assignObjNested(findIncluded(includes, val), includes)
       }
-      if (rel['translations'] && rel['translations'].length) {
-        for (let ii = 0; ii < rel['translations'].length; ii++) {
-          const lcl = rel['translations'][ii]
-          if (!rel['locales']) rel['locales'] = {}
-          if (lcl && lcl.locale) rel['locales'][lcl.locale] = lcl
-        }
-      }
-      return Object.assign({ id: that.id, type: that.type }, that.attributes, rel)
     }
-    return Object.assign({ id: that.id, type: that.type }, that.attributes)
+    if (rel['translations'] && rel['translations'].length) {
+      for (let ii = 0; ii < rel['translations'].length; ii++) {
+        const lcl = rel['translations'][ii]
+        if (!rel['locales']) rel['locales'] = {}
+        if (lcl && lcl.locale) rel['locales'][lcl.locale] = lcl
+      }
+    }
+    return Object.assign({ id: that.id, type: that.type }, that.attributes, rel)
   }
+  return Object.assign({ id: that.id, type: that.type }, that.attributes)
 }
 
 export function assignObjNestedNames(that, includes = false) {
@@ -80,11 +83,13 @@ export function assignObjNestedNames(that, includes = false) {
       if (Array.isArray(val)) {
         rel[`${key}IDs`] = []
         for (let ii = 0; ii < val.length; ii++) {
-          rel[`${key}IDs`].push(findIncluded(includes, val[ii]).id)
+          // sparse includes: skip unresolvable refs instead of throwing
+          const xxx = findIncluded(includes, val[ii])
+          if (xxx) rel[`${key}IDs`].push(xxx.id)
         }
       } else {
         const xxx = findIncluded(includes, val)
-        if (xxx) rel[`${key}Name`] = xxx.attributes.name
+        if (xxx && xxx.attributes) rel[`${key}Name`] = xxx.attributes.name
       }
     }
     return Object.assign({ id: that.id, type: that.type }, that.attributes, rel)
@@ -179,11 +184,15 @@ export function includeFormTranslations(collection) {
     if (collection.translations && collection.translations.length) {
       for (let ii = 0; ii < collection.translations.length; ii++) {
         const lcl = collection.translations[ii]
+        if (!lcl || !lcl.locale) continue
         if (!collection.locales) collection.locales = {}
         if (!collection.translationsAttributes) collection.translationsAttributes = []
         collection.locales[lcl.locale] = lcl
         collection.translationsAttributes.push(lcl)
-        locales.splice(locales.indexOf(lcl.locale), 1)
+        // unknown locale: leave the list untouched (indexOf -1 + splice(-1)
+        // used to wrongly remove the LAST entry)
+        const idx = locales.indexOf(lcl.locale)
+        if (idx !== -1) locales.splice(idx, 1)
       }
       collection.translations = null
     }
