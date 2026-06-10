@@ -80,6 +80,14 @@ fehlt**. On-Demand-Port wenn ein Konsumprojekt es braucht:
 
 ## 💡 Ideen / Später
 
+- [ ] **Normalisierter Client-Cache als Opt-in (Pinia-Colada)** — bedarfsgetrieben,
+  erst wenn ein Konsument (z.B. FreakFunnels-Nuxt3-Migration) ihn wirklich zieht.
+  Kontext: freaksProxy-Konzeptbewertung der funnels-Crew
+  (`~/Sites/FreakFunnels/docs/wissensbasis/befunde/freaksproxy-konzept.md`) —
+  Identity-Map-Idee gut, Eigenbau verworfen. Decoder-Pfad bleibt Default/Kontrakt;
+  Cache dockt später an der Pluggable-Decoder-Naht (Adapter Option 3, wartet auf
+  Austin-Go) an. Präferenz Pinia-Colada vor `@pinia-orm` (objekt-wrapped Hausformat
+  ist kein spec-JSON:API, ORM-Mapping = Reibung). (Tim, 2026-06-10)
 - [ ] **Dark-Mode-Toggle** im Layer als optionaler Component.
 - [ ] **PWA-Setup** (`@vite-pwa/nuxt`) als optionales Layer-Feature.
 - [ ] **OAuth-Provider** im `useAuth` ergänzen (GitHub/Google login flow für
