@@ -1,5 +1,12 @@
 node_modules
-.nuxt
+# .nuxt/ ist generiert und bleibt ignoriert — AUSSER dem einen eingecheckten
+# Fallback-Stub .nuxt/tsconfig.json. Ohne ihn bricht der Konsumenten-Build
+# (extends: [...nuxt3_layer]) mit
+# `TSConfckParseError: failed to resolve "extends":"./.nuxt/tsconfig.json"`,
+# weil .nuxt/tsconfig.json erst von `nuxt prepare` erzeugt wird (auf GitHub = 404).
+# `nuxt prepare` überschreibt den Stub lokal mit dem echten generierten File.
+.nuxt/*
+!.nuxt/tsconfig.json
 .output
 .data
 .env

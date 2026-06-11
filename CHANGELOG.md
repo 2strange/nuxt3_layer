@@ -8,6 +8,17 @@ jeweiligen Release-Tag (`extends: ['github:2strange/nuxt3_layer#v0.1.2']`).
 Decoder-Härtung + Layer-Hygiene. Kein API-Bruch; Verhalten für gültige Inputs
 unverändert (Zero-Config-Drop-in):
 
+- **fix (Build-Blocker):** Konsumenten-Build brach bei `nuxt prepare`/`nuxt generate`
+  mit `TSConfckParseError: failed to resolve "extends":"./.nuxt/tsconfig.json" in
+  nuxt3_layer/tsconfig.json`. Die Layer-`tsconfig.json` extended auf
+  `./.nuxt/tsconfig.json`, das aber erst `nuxt prepare` erzeugt — frisch via
+  `extends: ['github:2strange/nuxt3_layer#vX']` konsumiert fehlt es (auf
+  GitHub = 404). Fix: minimaler **Fallback-Stub `.nuxt/tsconfig.json`**
+  (`{ "compilerOptions": {} }`) eingecheckt, der das extends out-of-the-box
+  auflösbar macht; `.gitignore` trackt nur diesen Stub (`!.nuxt/tsconfig.json`),
+  der restliche `.nuxt/*` bleibt ignoriert. Lokales `nuxt prepare` (auch via
+  `postinstall`) überschreibt den Stub mit dem echten generierten tsconfig →
+  IDE/typecheck-Hints für Layer-Devs bleiben erhalten, kein Drift. Zero-Config.
 - **fix(decoder):** Null-Guard im Array-Zweig von `assignObjNestedNames` —
   sparse includes werfen keinen TypeError mehr, nicht auflösbare Refs werden
   übersprungen.

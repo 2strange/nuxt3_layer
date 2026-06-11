@@ -1,0 +1,14 @@
+{
+  // Eingecheckter Fallback-Stub — NICHT von Hand pflegen.
+  //
+  // Warum eingecheckt? Die Layer-`tsconfig.json` macht `extends: "./.nuxt/tsconfig.json"`.
+  // Dieses File erzeugt sonst erst `nuxt prepare`. Wird der Layer via
+  // `extends: ['github:2strange/nuxt3_layer#vX']` konsumiert, hat der Layer
+  // dort noch KEIN generiertes `.nuxt/` → der Konsumenten-Build bricht mit
+  // `TSConfckParseError: failed to resolve "extends":"./.nuxt/tsconfig.json"`.
+  // Dieser minimale Stub macht das extends auflösbar, ohne IDE/typecheck zu stören.
+  //
+  // Lokal überschreibt `nuxt prepare` (auch via postinstall) dieses File mit dem
+  // echten, vollständigen tsconfig — Drift ist also ausgeschlossen.
+  "compilerOptions": {}
+}
