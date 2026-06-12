@@ -199,6 +199,98 @@ Bei npm-Publish reicht ein simples `npm install @your-scope/nuxt3-layer`.
 
 ---
 
+## A2 — Content-Refresh (`swr`-routeRules + Purge-Endpoint) — **opt-in**
+
+> Gegenpart zum Deploy-Gem `capistrano-recipes4nuxt` (Cargo). Ersetzt den alten
+> Nuxt-2-„Seite neu rendern"-Button (`nuxt generate` → rsync) durch **on-demand
+> Cache-Purge** — **kein npm-Build mehr**. Voller Kontrakt:
+> `capistrano-recipes4nuxt/docs/migration-nuxt2-to-nuxt3-ssr.md` §10 +
+> `docs/PURGE_SMOKE_TEST.md`.
+
+**Wie es funktioniert:** Content-Routen werden auf `swr`
+(stale-while-revalidate) gestellt — Nitro cached den Render, nach TTL
+automatisch frisch. Der mitgelieferte Endpoint `POST /api/_purge` leert den
+Cache **sofort** (statt auf die TTL zu warten), sodass der nächste Request
+frisch rendert. Der Endpoint sitzt im Layer (`server/api/_purge.post.ts`) und
+ist **opt-in**: ohne gesetzten Token = **deaktiviert** (404).
+
+### Was der Consumer tun muss (3 Schritte)
+
+**1. Content-Routen auf `swr` stellen** — im eigenen `nuxt.config.ts`:
+
+```ts
+export default defineNuxtConfig({
+  extends: ['github:2strange/nuxt3_layer#v0.1.4'],
+  routeRules: {
+    '/':            { swr: 600 },   // Startseite, 10 min TTL
+    '/pages/**':    { swr: 600 },   // alle CMS-Content-Seiten
+    '/api/admin/**': { swr: false }, // Admin/dynamisch: NICHT cachen
+  },
+})
+```
+
+`swr: <sekunden>` = TTL; `swr: true` = unbegrenzt bis Purge. Generisch — welche
+Routen Content sind, entscheidet das Projekt (hier nichts hardcoden).
+
+**2. Purge-Token setzen** (aktiviert den Endpoint). Server-only, **nie** public:
+
+```bash
+# .env / shared/config/nuxt3_ssr.env (vom Gem hochgeladen, §4)
+NUXT_PURGE_TOKEN=<langes-zufalls-secret>
+```
+
+Nuxt mappt `NUXT_PURGE_TOKEN` automatisch auf `runtimeConfig.purgeToken` (der
+Layer deklariert den Key mit leerem Default → ohne Env = Endpoint aus).
+
+**3. Backend triggert den Purge** (Bill-Revier) — statt `npm run export`:
+
+```ruby
+# BE-Worker: nach Content-Änderung / Admin-„aktualisieren"-Klick
+`curl -fsS -X POST -H "x-purge-token: #{ENV['NUXT_PURGE_TOKEN']}" \
+   http://127.0.0.1:#{nuxt3_ssr_port}/api/_purge`
+```
+
+Antwort `{ ok: true, purged: <n> }`. Falscher/kein Token → `401`; Token gar
+nicht konfiguriert → `404` (Endpoint deaktiviert).
+
+### ⚠️ G15 — Nitro-Version-Pin + Purge-Smoke-Test (Pflicht)
+
+Der Purge nutzt **undokumentierte Nitro-Cache-Internals** (es gibt kein
+offizielles Invalidierungs-API für routeRules-Caches, nuxt#20495). Ein
+Nuxt/Nitro-Upgrade kann das Cache-Key-Schema ändern und den Purge **lautlos ins
+Leere** laufen lassen (HTTP 200, Cache bleibt stale). **Verifiziert** wurde der
+Purge gegen:
+
+| Nuxt | Nitropack | unstorage | Node | Purge verifiziert | Datum |
+|---|---|---|---|---|---|
+| 3.21.6 | 2.13.4 | 1.17.5 | 24.16.0 | ✅ ja (`npm run verify:purge`) | 2026-06-12 |
+
+→ **Consumer pinnt exakt** auf eine verifizierte Kombi und **fährt den
+Smoke-Test vor jedem Bump**:
+
+```jsonc
+// Consumer-package.json
+{
+  "dependencies": { "nuxt": "3.21.6" },
+  "overrides":    { "nitropack": "2.13.4" }  // yarn/pnpm: "resolutions"
+}
+```
+
+Der Layer bringt einen **reproduzierbaren Beweis** mit: `npm run verify:purge`
+(`test/run-purge-verify.sh`) baut eine swr-Fixture mit dem echten
+`_purge`-Endpoint, startet Nitro kurz, holt eine Route (cached), purged, holt
+erneut → muss **frisch** sein. Exit 0 = Purge real verifiziert. Den Consumer-
+seitigen Smoke-Test liefert das Gem (`docs/purge-smoke-test.sh`) — gegen die
+laufende Prod-/Staging-Instanz.
+
+> **Gefundener Fallstrick (in diese Version eingebaut):**
+> `useStorage('cache').clear('nitro')` **no-opt** auf den colon-namespaced
+> Nitro-Cache-Keys (unstorage 1.17.x) — der Endpoint enumeriert deshalb
+> `getKeys()` + `removeItem()` je Key. Details: Header-Kommentar in
+> `server/api/_purge.post.ts`.
+
+---
+
 ## Ein **bestehendes Nuxt 2 Projekt** migrieren
 
 Reihenfolge die sich bewährt hat:

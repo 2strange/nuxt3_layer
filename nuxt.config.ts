@@ -51,6 +51,11 @@ export default defineNuxtConfig({
       deployMode: 'development',
     },
     apiBaseServer: '',
+    // A2 Content-Refresh (opt-in): token that guards server/api/_purge.
+    // SERVER-ONLY — never put this under public. Empty default = the purge
+    // endpoint is DISABLED (returns 404). A consumer enables A2 by setting
+    // NUXT_PURGE_TOKEN (Nuxt maps it to runtimeConfig.purgeToken). See README §A2.
+    purgeToken: '',
   },
 
   i18n: {

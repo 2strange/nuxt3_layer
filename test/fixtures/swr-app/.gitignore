@@ -1,0 +1,7 @@
+# Build artifacts + the symlinked real endpoint (created by run-purge-verify.sh)
+.nuxt
+.output
+.data
+node_modules
+server/api/_purge.post.ts
+.server.log

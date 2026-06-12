@@ -3,6 +3,42 @@
 Alle nennenswerten Änderungen am Layer. Konsumprojekte pinnen am besten auf den
 jeweiligen Release-Tag (`extends: ['github:2strange/nuxt3_layer#v0.1.2']`).
 
+## v0.1.4 — 2026-06-12
+
+**A2 Content-Refresh (opt-in)** — FE-Gegenpart zum Deploy-Gem
+`capistrano-recipes4nuxt`. Kein API-Bruch, backward-kompatibel: bestehende
+Konsumenten ohne `NUXT_PURGE_TOKEN` bekommen einen deaktivierten Endpoint (404),
+sonst null Verhaltensänderung. (Branch `feat/a2-purge-endpoint`.)
+
+- **feat:** Nitro-Server-Route `server/api/_purge.post.ts` — leert on-demand den
+  `swr`-routeRules-Cache (`POST /api/_purge`), sodass der nächste Request frisch
+  rendert (ersetzt den Nuxt-2-„Seite neu rendern"-Build). **Opt-in/Zero-Config:**
+  auth-gated via `runtimeConfig.purgeToken` (`NUXT_PURGE_TOKEN`, **server-only**);
+  ohne Token = Endpoint deaktiviert (`404`). Token-Vergleich constant-time
+  (`timingSafeEqual`), Auth-Header `x-purge-token` (= Gem-Kontrakt §10).
+- **feat:** `runtimeConfig.purgeToken: ''` im Layer deklariert (leerer Default
+  → Endpoint aus). Konsumenten aktivieren A2 allein durch Setzen von
+  `NUXT_PURGE_TOKEN`.
+- **🔴 G15 — Purge real verifiziert:** reproduzierbarer Beweis
+  `npm run verify:purge` (`test/run-purge-verify.sh` + `test/purge-smoke-test.sh`
+  + Fixture `test/fixtures/swr-app`): baut eine swr-Route + den echten Endpoint,
+  startet Nitro kurz (`node .output/server/index.mjs`, sauber beendet — kein
+  `dev`-Daemon), holt cached → purged → holt frisch. **Ergebnis: PASS**
+  (Render-Marker wechselt nach Purge; Auth 401 bei kein/falschem Token; 404 bei
+  nicht gesetztem Token), 3× reproduziert.
+- **⚠️ G15-Fallstrick gefunden + umgangen:**
+  `useStorage('cache').clear(prefix)` **no-opt** auf den colon-namespaced
+  Nitro-Cache-Keys (`nitro:routes:_:…json`, unstorage 1.17.5) — `clear()` löscht
+  nichts, Purge schlüge **lautlos** fehl (HTTP 200, Cache stale). Endpoint
+  enumeriert deshalb `getKeys('nitro')` + `removeItem()` je Key.
+- **G15-Pin:** verifizierte Version in `package.json`
+  (`a2ContentRefresh.purgeVerifiedAgainst`: nuxt 3.21.6 / nitropack 2.13.4 /
+  unstorage 1.17.5 / node 24.16.0). **Layer-Deps bleiben Caret** (kein
+  Hard-Pin → backward-kompatibel); der **Consumer** pinnt exakt + re-verifiziert
+  vor jedem Nuxt/Nitro-Bump (README §A2). Upgrade = Re-Verify.
+- **docs:** README §A2 (swr-routeRules-Muster + Token + BE-`curl` + G15-Tabelle),
+  CLAUDE.md-Abschnitt, `npm run verify:purge`-Script.
+
 ## v0.1.3 — 2026-06-12
 
 Decoder-Härtung + Layer-Hygiene. Kein API-Bruch; Verhalten für gültige Inputs
