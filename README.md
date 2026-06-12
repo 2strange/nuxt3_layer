@@ -8,11 +8,11 @@ Jedes Projekt **erbt** den Layer via `extends:` und überschreibt nur was abweic
 Updates am Layer → `npm update` / `git pull` in jedem Projekt → alle profitieren
 gleichzeitig.
 
-> **Stand (2026-06-10):** aktiv & canonical reference, aktuell **v0.1.2**.
+> **Stand (2026-06-12):** aktiv & canonical reference, aktuell **v0.1.3**.
 > Public GitHub-Repo
 > [`github.com/2strange/nuxt3_layer`](https://github.com/2strange/nuxt3_layer)
 > (Branch `main` = stabil, `claude` = Claude-getriebene Änderungen). Konsumieren
-> via **Tag-Pin** `extends: ['github:2strange/nuxt3_layer#v0.1.2']` (empfohlen,
+> via **Tag-Pin** `extends: ['github:2strange/nuxt3_layer#v0.1.3']` (empfohlen,
 > statt `#main` — s.u.). Erster Consumer: `~/Sites/moja-lms`. Begleit-Docs siehe
 > `CLAUDE.md` + `BACKLOG.md`, Release-Historie in `CHANGELOG.md`.
 
@@ -87,13 +87,13 @@ nuxt3_layer/
 ```ts
 // my-project/nuxt.config.ts
 export default defineNuxtConfig({
-  extends: ['github:2strange/nuxt3_layer#v0.1.2'],  // Tag-Pin (empfohlen)
+  extends: ['github:2strange/nuxt3_layer#v0.1.3'],  // Tag-Pin (empfohlen)
   // oder: extends: ['../nuxt3_layer']  // lokaler Pfad (Monorepo-Sibling, s. Hinweis unter 7.)
   // oder: npm-Paket nach Publish: extends: ['@your-scope/nuxt3-layer']
 })
 ```
 
-> **Empfehlung: auf den Release-Tag pinnen** (`#v0.1.2`), nicht auf `#main`.
+> **Empfehlung: auf den Release-Tag pinnen** (`#v0.1.3`), nicht auf `#main`.
 > `#main` bewegt sich unter deinen Builds weg — ein Layer-Push kann ein
 > Konsumprojekt unangekündigt brechen. Mit Tag-Pin sind Builds reproduzierbar;
 > Updates = bewusster Tag-Wechsel (Changelog checken → Pin hochziehen).

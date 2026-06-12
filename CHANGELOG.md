@@ -3,7 +3,7 @@
 Alle nennenswerten Änderungen am Layer. Konsumprojekte pinnen am besten auf den
 jeweiligen Release-Tag (`extends: ['github:2strange/nuxt3_layer#v0.1.2']`).
 
-## v0.1.3 — 2026-06-10
+## v0.1.3 — 2026-06-12
 
 Decoder-Härtung + Layer-Hygiene. Kein API-Bruch; Verhalten für gültige Inputs
 unverändert (Zero-Config-Drop-in):
