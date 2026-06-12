@@ -75,6 +75,16 @@ Bei Breaking Changes → in der README + BACKLOG notieren, Major-Version bumpen.
   `main.sass` (Reset + `pa-*`/`d-flex`/`ga-*`-Utilities) still aus dem Build
   (virtuelles SASS-Modul, von Nuxt nicht extrahiert). Body-Font = `.v-application`-
   Regel in `assets/styles/app.scss` (nicht mehr `$body-font-family`-Override).
+- **A2 Content-Refresh (opt-in):** Nitro-Server-Route
+  `server/api/_purge.post.ts` leert on-demand den `swr`-routeRules-Cache.
+  Auth-gated via `runtimeConfig.purgeToken` (`NUXT_PURGE_TOKEN`, **server-only,
+  nie public**); ohne Token = Endpoint deaktiviert (404). Der Purge hängt an
+  **undokumentierten Nitro-Internals** (G15) — daher Version-Pin in
+  `package.json` (`a2ContentRefresh.purgeVerifiedAgainst`) + reproduzierbarer
+  Smoke-Test `npm run verify:purge` (`test/`). **Vor jedem Nuxt/Nitro-Bump
+  re-verifizieren.** ⚠️ `useStorage('cache').clear(prefix)` no-opt auf den
+  colon-Keys → Endpoint nutzt `getKeys()` + `removeItem()`. Consumer-Setup:
+  README §A2. BE-`curl`-Trigger = Bill-Revier (nicht im Layer).
 
 ## Layer-spezifische Regeln
 

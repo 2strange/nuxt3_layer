@@ -1,0 +1,9 @@
+{
+  "name": "swr-app-fixture",
+  "private": true,
+  "type": "module",
+  "description": "G15 verification fixture — extends the layer, exposes one swr route + the real _purge endpoint. Not published; resolves nuxt/nitro from the parent layer's node_modules.",
+  "scripts": {
+    "build": "nuxt build"
+  }
+}
