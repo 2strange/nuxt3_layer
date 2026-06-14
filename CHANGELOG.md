@@ -3,6 +3,40 @@
 Alle nennenswerten Änderungen am Layer. Konsumprojekte pinnen am besten auf den
 jeweiligen Release-Tag (`extends: ['github:2strange/nuxt3_layer#v0.1.2']`).
 
+## v0.1.4 — 2026-06-14
+
+Vuetify-Setup auf das offizielle `vuetify-nuxt-module` umgestellt. Behebt einen
+Build-Bug, durch den Vuetifys **globales Stylesheet aus dem Bundle fiel**. Kein
+Bruch der Composable-/Component-API; Drop-in für gültige Setups.
+
+- **fix (Build/Styles):** Das frühere Setup (hand-gerollter `vite-plugin-vuetify`-
+  Hook + manuelles `createVuetify`-Plugin) lud Vuetify per `css: ['vuetify/styles']`
+  **unter** `styles: { configFile }`. In dem Modus ersetzt vite-plugin-vuetify den
+  Import durch ein **virtuelles SASS-Modul**, das Nuxts CSS-Pipeline nicht
+  extrahiert (`[nuxt] Cannot extract styles for virtual:plugin-vuetify:styles/main.sass`).
+  Folge: das globale `main.sass`-Aggregat (`*{box-sizing:border-box}`-Reset **und
+  alle** Spacing/Flex/Gap-Utilities `pa-*`/`ma-*`/`d-flex`/`ga-*`) wurde still aus
+  dem gebauten Bundle gedroppt → content-box-Overflow + Utilities als No-ops. Nur
+  Komponenten-Styles (autoImport) überlebten.
+- **change:** Vuetify läuft jetzt über das offizielle **`vuetify-nuxt-module`**
+  (wie `nuxt3_site_layer` seit v0.1.x). Es emittiert die globalen Styles korrekt
+  out-of-the-box (SSR-inlined **und** SPA/public-`.css`), inkl. Auto-Import/
+  Treeshaking. Verifiziert per Build-Diff (vorher 0 Treffer für `.pa-4`/Reset im
+  gesamten `.output`, nachher vorhanden in SSR- **und** SPA-Build) + realem
+  `valid_frontend`-Build.
+- **change:** `plugins/vuetify.ts` und `assets/styles/vuetify.scss` entfernt;
+  Theme/Icons wandern nach `vuetify.vuetifyOptions` in `nuxt.config.ts`. Der
+  Inter-Body-Font (vormals `$body-font-family`-SASS-Override) lebt jetzt als
+  `.v-application { font-family: 'Inter', … }`-Regel in `app.scss` — vermeidet die
+  configFile+SSR-Caveat (`experimental.inlineSSRStyles: false`).
+- **deps:** `vite-plugin-vuetify` raus (das Modul bringt es transitiv mit),
+  `vuetify-nuxt-module` rein.
+- **⚠️ Konsumenten-Kontrakt (Theme-Override):** Theme nicht mehr via eigenem
+  `plugins/vuetify.ts`, sondern app-seitig über `vuetify.vuetifyOptions.theme`
+  im Projekt-`nuxt.config.ts` (merged auf den Layer-Default). Wer einen lokalen
+  Workaround-Wrapper (`assets/styles/vuetify-global.scss` + `css:[…]`) gesetzt
+  hatte, kann ihn nach Pin auf `#v0.1.4` + `npm install` **entfernen**.
+
 ## v0.1.3 — 2026-06-12
 
 Decoder-Härtung + Layer-Hygiene. Kein API-Bruch; Verhalten für gültige Inputs

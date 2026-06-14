@@ -22,7 +22,7 @@ gleichzeitig.
 
 ```
 nuxt3_layer/
-├── nuxt.config.ts          # Vuetify, Pinia, i18n, runtimeConfig-Defaults
+├── nuxt.config.ts          # Vuetify (vuetify-nuxt-module), Pinia, i18n, runtimeConfig-Defaults
 ├── app.config.ts           # static defaults (company info, mails) — overridable
 ├── app.vue                 # NuxtLayout-Wrapper (standalone-dev support)
 │
@@ -48,8 +48,8 @@ nuxt3_layer/
 │   └── guest.js
 │
 ├── plugins/
-│   ├── vuetify.ts          # Vuetify-Setup mit Default-Theme
 │   └── auth-init.ts        # SSR-safe Cookie-Hydration + User-Fetch
+│                           # (Vuetify wird vom vuetify-nuxt-module verdrahtet — kein eigenes Plugin mehr)
 │
 ├── components/             # auto-importiert in Konsumprojekten
 │   ├── AdminFooter.vue     # minimaler Admin-Footer (App-Name + ©Jahr)
@@ -74,7 +74,7 @@ nuxt3_layer/
 ├── services/log.js
 ├── utils/                  # api/decoder/finder/listFilter/txt/timing/style.config
 ├── locales/                # de.json + en.json (Projekte merge'n eigene Keys rein)
-├── assets/styles/          # vuetify.scss + variables.scss + app.scss
+├── assets/styles/          # variables.scss + app.scss (Inter-Body-Font-Regel)
 └── error.vue
 ```
 
@@ -152,9 +152,31 @@ Selbes für jede andere Page/Layout/Component.
 
 ### 5. Eigene Theme-Farben
 
-Vuetify-Theme im Layer-Plugin liegt fest. Zum Überschreiben einfach
-`plugins/vuetify.ts` im Projekt anlegen (überschreibt den Layer-Plugin) oder
-einen zweiten Plugin nachschieben der das Theme patcht.
+Seit **v0.1.4** verdrahtet der Layer Vuetify über das offizielle
+`vuetify-nuxt-module`. Theme/Farben überschreibst du **app-seitig** im
+Projekt-`nuxt.config.ts` — das wird auf den Layer-Default gemerged, **kein**
+eigenes `plugins/vuetify.ts` mehr nötig:
+
+```ts
+// Projekt-nuxt.config.ts
+export default defineNuxtConfig({
+  extends: ['github:2strange/nuxt3_layer#v0.1.4'],
+  vuetify: {
+    vuetifyOptions: {
+      theme: {
+        defaultTheme: 'light',
+        themes: { light: { colors: { primary: '#4F5B93' } } },
+      },
+    },
+  },
+})
+```
+
+> **Upgrade-Hinweis (< v0.1.4):** Der frühere `vite-plugin-vuetify`-Hook mit
+> `styles: { configFile }` ließ Vuetifys globales Stylesheet (Reset +
+> `pa-*`/`d-flex`/`ga-*`-Utilities) aus dem Build fallen. Wer dafür einen lokalen
+> Workaround-Wrapper (`assets/styles/vuetify-global.scss` + `css: [...]`) gesetzt
+> hatte, kann ihn nach Pin auf `#v0.1.4` + `npm install` **entfernen**.
 
 ### 6. Eigene i18n-Strings
 
@@ -180,10 +202,11 @@ es gilt die NODE_PATH-Ausnahme unten: solange der Layer keine eigenen
 
 Bei npm-Publish reicht ein simples `npm install @your-scope/nuxt3-layer`.
 
-> **Hinweis (v0.1.2+):** `@nuxt/kit`, `vite-plugin-vuetify` und `sass-embedded`
-> sind jetzt in `dependencies` (nicht mehr `devDependencies`), weil die
-> Layer-`nuxt.config.ts` sie zur Config-Eval-Zeit importiert bzw. die Layer-SCSS
-> sie zur Consumer-Build-Zeit braucht. Beim Konsum via `github:`-extends oder
+> **Hinweis (v0.1.2+):** `@nuxt/kit`, `vuetify-nuxt-module` und `sass-embedded`
+> sind in `dependencies` (nicht `devDependencies`), weil die
+> Layer-`nuxt.config.ts` sie zur Config-Eval-Zeit braucht bzw. das Modul Vuetifys
+> SCSS zur Consumer-Build-Zeit kompiliert. *(Seit v0.1.4 bringt
+> `vuetify-nuxt-module` das frühere direkte `vite-plugin-vuetify` transitiv mit.)* Beim Konsum via `github:`-extends oder
 > npm-Paket brauchen Consumer damit **keinen** `postinstall`-Workaround mehr
 > (`NODE_PATH=./node_modules nuxt prepare`) — falls du den Hack noch im Projekt
 > hast, einfach entfernen.

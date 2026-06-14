@@ -1,6 +1,6 @@
 {
   "name": "nuxt3-layer",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "type": "module",
   "description": "Shared Nuxt 3 base layer \u2014 auth, Vuetify 3, Pinia, helpers, composables. Extend via `extends: ['../nuxt3_layer']` in your project's nuxt.config.ts.",
@@ -26,10 +26,10 @@
     "pinia": "^2.2.6",
     "sass-embedded": "^1.81.0",
     "tiptap-markdown": "^0.8.10",
-    "vite-plugin-vuetify": "^2.0.4",
     "vue": "^3.5.13",
     "vue-router": "^4.4.5",
-    "vuetify": "^3.7.5"
+    "vuetify": "^3.7.5",
+    "vuetify-nuxt-module": "^0.19.5"
   },
   "devDependencies": {
     "@types/js-cookie": "^3.0.6",

@@ -66,9 +66,15 @@ Bei Breaking Changes → in der README + BACKLOG notieren, Major-Version bumpen.
   Projekt) und `useRuntimeConfig().public`. Projekte überschreiben in ihren
   eigenen `nuxt.config.ts` (runtimeConfig) und `app.config.ts` (defineAppConfig).
   **Kein Import** von `~/app-conf` mehr — der Layer ist davon entkoppelt.
-- **Vuetify:** v3 via Plugin in `plugins/vuetify.ts` mit Default-Theme.
-  Theme-Anpassung per Projekt → eigenes `plugins/vuetify.ts` schreiben
-  oder Theme nachträglich patchen.
+- **Vuetify:** v3 via offizielles **`vuetify-nuxt-module`** (seit v0.1.4) —
+  Theme/Icons in `nuxt.config.ts` unter `vuetify.vuetifyOptions`, Default-Theme
+  `dark`. Theme-Anpassung per Projekt → app-seitig `vuetify.vuetifyOptions.theme`
+  im Konsum-`nuxt.config.ts` (merged auf den Layer-Default), **kein** eigenes
+  `plugins/vuetify.ts`. **Wichtig:** NICHT zum hand-gerollten `vite-plugin-vuetify`-
+  Hook + `styles: { configFile }` zurück — der droppte Vuetifys globales
+  `main.sass` (Reset + `pa-*`/`d-flex`/`ga-*`-Utilities) still aus dem Build
+  (virtuelles SASS-Modul, von Nuxt nicht extrahiert). Body-Font = `.v-application`-
+  Regel in `assets/styles/app.scss` (nicht mehr `$body-font-family`-Override).
 
 ## Layer-spezifische Regeln
 

@@ -2,6 +2,11 @@
 
 html, body { margin: 0; padding: 0; }
 
+// House body font. Replaces the former Vuetify `$body-font-family` SASS override
+// (dropped when we moved off the configFile setup — see nuxt.config.ts). Applied
+// to .v-application so it wins over Vuetify's precompiled default.
+.v-application { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+
 .corset {
   max-width: 1280px;
   margin: 0 auto;
