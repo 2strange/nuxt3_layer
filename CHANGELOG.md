@@ -3,6 +3,43 @@
 Alle nennenswerten Änderungen am Layer. Konsumprojekte pinnen am besten auf den
 jeweiligen Release-Tag (`extends: ['github:2strange/nuxt3_layer#v0.1.2']`).
 
+## v0.3.0 — 2026-06-20
+
+**SEO-Upgrade: reaktiv + config-getrieben + volle OG-Defaults** — baut additiv
+auf v0.2.0 (Batch C) auf. Lehre aus Austins Live-OG-Unfurl: **vollständige
+OG-Karte + starke Defaults + per-Content-Dynamik** schlagen Minimalismus. Weiter
+**keine neue Runtime-Dependency** (alles über `useHead`/`useSeoMeta`). Rein
+additiv, backward-kompatibel — bestehende `useSeo()`/`useJsonLd()`-Aufrufe laufen
+unverändert. ⚠️ **Ein API-Detail:** `useSeo()` gibt jetzt **reaktive Refs** zurück
+(`siteUrl`/`title`/… sind `ComputedRef`) — wer den `siteUrl`-Returnwert direkt in
+einen String interpolierte, braucht `.value`. (Branch `claude`.)
+
+- **feat (reaktiv):** `useJsonLd(nodesOrGetter, opts)` akzeptiert jetzt auch eine
+  **Funktion/`computed`/`ref`** → reaktives `useHead(() => ({script:[...]}))`,
+  sodass der `@graph` **nachzieht, wenn Content async lädt** (Artikel-Seite).
+  `useSeo`-`opts`-Werte dürfen Getter/`ref` sein (intern als computed gelesen,
+  **nicht** einmalig gesnapshottet).
+- **feat (config-getrieben):** neuer **`jsonLD`-Defaults-Block** in `app.config.ts`
+  — **per-Locale** (`de`/`en`/…), NEUTRALE Placeholder: `defaultTitle`,
+  `defaultDesc`, `websiteName`, `websiteDesc`, `organisation`, `inLanguage`,
+  `sameAs`, `logo:{path,width,height,caption}`. `useSeo`/`useJsonLd` lesen ihn via
+  `useConfig` → **Zero-per-Page = trotzdem voller Graph + volle OG-Karte**.
+- **feat (Defaults-Disziplin):** `useSeo` liefert default-`og:image`
+  (`company.ogImage` → `jsonLD.logo` → `${siteUrl}/og-default.png`),
+  default-Description und `og:site_name` auf JEDER Seite — auch ohne per-Page-Daten.
+- **feat (article:*):** bei `datePublished` (oder `ogType:'article'`) →
+  `og:type=article` + `article:published_time` + `article:modified_time` +
+  `article:publisher` (aus `jsonLD.organisation`).
+- **feat (@graph-Convenience):** `useJsonLd.organization()` / `.website()` **ohne
+  Args** = vollständig aus dem `jsonLD`-Config-Block (+ `company.fon`/`mail`).
+  `imageObject()` um **`thumbnailUrl`** ergänzt.
+- **feat (config):** `company.ogImage` in `app.config.ts` (default OG-Image-Pfad).
+- **refactor:** geteilte reine Helfer (`seoDefaults`/`resolveSiteUrl`/
+  `absoluteUrl`/`ogLocale`) nach `utils/seo.js` (explizit via `~/utils/seo`
+  importiert, Layer-Konvention) — kein Auto-Import-Clash zwischen den Composables.
+- **docs:** README §SEO (Combined-Pattern + reaktives Artikel-Beispiel +
+  config-Defaults), CLAUDE.md, Demo-`pages/index.vue` (kombiniert + reaktiv-Snippet).
+
 ## v0.2.0 — 2026-06-20
 
 **SEO + JSON-LD (Batch C)** — zwei neue, generische Composables für Title/OG/

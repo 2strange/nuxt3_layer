@@ -75,14 +75,24 @@ Bei Breaking Changes → in der README + BACKLOG notieren, Major-Version bumpen.
   `main.sass` (Reset + `pa-*`/`d-flex`/`ga-*`-Utilities) still aus dem Build
   (virtuelles SASS-Modul, von Nuxt nicht extrahiert). Body-Font = `.v-application`-
   Regel in `assets/styles/app.scss` (nicht mehr `$body-font-family`-Override).
-- **SEO/JSON-LD (seit v0.2.0):** `useSeo()` (Title/Description/canonical +
-  OG/Twitter via `useHead`/`useSeoMeta`) und `useJsonLd()` (schema.org-`@graph`
-  via `useHead`) — **lean, keine extra Runtime-Dep**. Alle Daten aus `opts` /
-  `useConfig` (`appName`, `company.*`) / `runtimeConfig.public.siteUrl` —
-  **nichts hardcoden**. `useJsonLd`-Builder (`organization`/`website`/`webPage`/
-  `breadcrumbList`/`imageObject`) verdrahten `@id`-Cross-Links intern. Neuer
-  Config-Key `runtimeConfig.public.siteUrl` (kanonische Public-URL,
-  `NUXT_PUBLIC_SITE_URL`). Consumer-Setup: README §SEO.
+- **SEO/JSON-LD (v0.2.0, ausgebaut v0.3.0):** `useSeo()` (Title/Description/
+  canonical + **volle** OG/Twitter + `article:*` via `useHead`/`useSeoMeta`) und
+  `useJsonLd()` (schema.org-`@graph` via `useHead`) — **lean, keine extra
+  Runtime-Dep**. **Nichts hardcoden.** Daten aus `opts` / dem per-Locale
+  **`jsonLD`-Defaults-Block** + `company.*` in `app.config.ts` / `runtimeConfig.
+  public` (`appName`/`siteUrl`). **v0.3-Leitidee:** volle OG-Karte + starke
+  Defaults + per-Content-Dynamik:
+  - **Reaktiv:** `useJsonLd(nodesOrGetter)` nimmt Funktion/`computed`/`ref` →
+    `@graph` zieht bei async-Content nach; `useSeo`-`opts` dürfen Getter/`ref`
+    sein. ⚠️ `useSeo()` gibt jetzt **`ComputedRef`s** zurück (`siteUrl.value`).
+  - **Config-getrieben:** `useJsonLd.organization()`/`.website()` **ohne Args** =
+    aus dem `jsonLD`-Block → Zero-per-Page = trotzdem voller Graph + OG-Karte.
+  - `@id`-Cross-Links (logo↔org/website→publisher/webpage→…) intern; Builder
+    `organization`/`website`/`webPage`/`breadcrumbList`/`imageObject`
+    (+ `thumbnailUrl`). Reine Helfer in **`utils/seo.js`** (`seoDefaults`/
+    `resolveSiteUrl`/`absoluteUrl`/`ogLocale`), explizit via `~/utils/seo`.
+  - Config-Keys: `runtimeConfig.public.siteUrl` (`NUXT_PUBLIC_SITE_URL`),
+    `app.config` `jsonLD[locale]` + `company.ogImage`. Consumer-Setup: README §SEO.
 - **A2 Content-Refresh (opt-in):** Nitro-Server-Route
   `server/api/_purge.post.ts` leert on-demand den `swr`-routeRules-Cache.
   Auth-gated via `runtimeConfig.purgeToken` (`NUXT_PURGE_TOKEN`, **server-only,

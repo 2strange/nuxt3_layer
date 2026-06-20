@@ -46,37 +46,55 @@ async function logout() {
   await doLogout()
 }
 
-// --- SEO + JSON-LD demo --------------------------------------------------
-// Shows how a CONSUMER (e.g. keyhub) wires the layer's useSeo/useJsonLd,
-// pulling ALL data from app.config (company.*) + runtimeConfig (siteUrl/appName).
-// Nothing project-specific is hardcoded — swap in your own data per page.
-const { CONFIG, appConfig } = useConfig()
+// --- SEO + JSON-LD demo (combined pattern) -------------------------------
+// ONE useSeo() + useJsonLd() block, the way keyhub's buildHead + buildJsonLD
+// ran together. All data flows from app.config (jsonLD defaults + company.*) +
+// runtimeConfig (siteUrl/appName) — nothing project-specific is hardcoded.
+//
+// STRONG DEFAULTS: even with zero per-page data, useSeo emits a full OG card
+// (default title/description/og:image from the jsonLD[locale] block) and the
+// org()/website() builders below read that same block — so every route ships a
+// complete @graph. Pages override single fields as needed.
+const { CONFIG } = useConfig()
 
+// useSeo returns reactive refs (siteUrl is a ComputedRef → use .value below).
 const { siteUrl } = useSeo({
   title: 'Start',
   description: `Standalone-Demo des nuxt3_layer für ${CONFIG('appName')}.`,
-  // image: { url: '/og-default.png', width: 1200, height: 630 },
+  // image: { url: '/og/start.png', width: 1200, height: 630 }, // else default OG image
 })
 
-const logo = useJsonLd.imageObject({
-  id: `${siteUrl}#logo`,
-  url: `${siteUrl}/logo.png`,
-  caption: CONFIG('company.name') || CONFIG('appName'),
-})
-
+// Static @graph: org + website come straight from the jsonLD config block
+// (no args needed). Cross-@id wiring (logo↔org, website→publisher) is internal.
 useJsonLd([
-  useJsonLd.organization({
-    siteUrl,
-    name: CONFIG('company.legal') || CONFIG('company.name') || CONFIG('appName'),
-    telephone: CONFIG('company.fon') || undefined,
-    email: CONFIG('company.mail') || undefined,
-    logo,
-  }),
-  useJsonLd.website({
-    siteUrl,
-    name: CONFIG('appName'),
-    inLanguage: 'de-DE',
-  }),
-  logo,
+  useJsonLd.organization(),
+  useJsonLd.website(),
+  useJsonLd.webPage({ url: `${siteUrl.value}${useRoute().path}`, name: 'Start' }),
 ])
+
+// --- Dynamic article example (reactive) ----------------------------------
+// On a content/article route you'd pass GETTERS so the head + @graph follow the
+// async-loaded data. useSeo reads the getters reactively; useJsonLd takes a
+// function and re-renders when `article` resolves:
+//
+//   const { data: article } = await useFetch(`/api/articles/${route.params.slug}`)
+//   useSeo({
+//     title:         () => article.value?.title,
+//     description:   () => article.value?.excerpt,
+//     image:         () => article.value?.ogImage,
+//     datePublished: () => article.value?.publishedAt,  // → og:type=article + article:published_time
+//     dateModified:  () => article.value?.updatedAt,
+//   })
+//   useJsonLd(() => {
+//     const a = article.value
+//     if (!a) return []
+//     const url = `${siteUrl.value}${useRoute().path}`
+//     return [
+//       useJsonLd.webPage({ url, name: a.title, description: a.excerpt,
+//                           datePublished: a.publishedAt, dateModified: a.updatedAt,
+//                           breadcrumb: true, primaryImage: true }),
+//       useJsonLd.breadcrumbList({ pageUrl: url, items: [
+//         { name: 'Start', item: `${siteUrl.value}/` }, { name: a.title } ] }),
+//     ]
+//   })
 </script>

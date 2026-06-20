@@ -23,7 +23,7 @@ gleichzeitig.
 ```
 nuxt3_layer/
 ├── nuxt.config.ts          # Vuetify (vuetify-nuxt-module), Pinia, i18n, runtimeConfig-Defaults
-├── app.config.ts           # static defaults (company info, mails) — overridable
+├── app.config.ts           # static defaults (company info, mails, jsonLD SEO defaults) — overridable
 ├── app.vue                 # NuxtLayout-Wrapper (standalone-dev support)
 │
 ├── composables/            # auto-import in jedem konsumierenden Projekt
@@ -74,7 +74,7 @@ nuxt3_layer/
 │   └── crew/login.vue      # Login-Page
 │
 ├── services/log.js
-├── utils/                  # api/decoder/finder/listFilter/txt/timing/style.config
+├── utils/                  # api/decoder/finder/listFilter/txt/timing/style.config/seo
 ├── locales/                # de.json + en.json (Projekte merge'n eigene Keys rein)
 ├── assets/styles/          # variables.scss + app.scss (Inter-Body-Font-Regel)
 └── error.vue
@@ -317,25 +317,65 @@ laufende Prod-/Staging-Instanz.
 
 ---
 
-## SEO + JSON-LD (`useSeo` / `useJsonLd`) — seit v0.2.0
+## SEO + JSON-LD (`useSeo` / `useJsonLd`) — seit v0.2.0, ausgebaut in v0.3.0
 
 Zwei generische Composables für Meta-Tags und schema.org-Strukturdaten. **Lean,
 keine extra Runtime-Dependency** — alles über Nuxts `useHead`/`useSeoMeta`. Der
 Layer hardcoded **nichts** Projektspezifisches; alle Daten kommen aus deinen
-`opts`, `app.config.ts` (`company.*`) und `runtimeConfig.public`
-(`appName` / `siteUrl`).
+`opts`, dem `jsonLD`-Defaults-Block + `company.*` in `app.config.ts` und
+`runtimeConfig.public` (`appName` / `siteUrl`).
+
+Leitidee (v0.3): **volle OG-Karte + starke Defaults + per-Content-Dynamik**.
+Konkret:
+- **Config-getriebene Defaults** — ein per-Locale `jsonLD`-Block in `app.config.ts`
+  liefert `defaultTitle`/`defaultDesc`/`og:image`/`organisation`/`logo`/… Damit
+  bekommt **jede** Route eine vollständige OG-Karte + einen kompletten `@graph`,
+  **auch ohne per-Page-Daten**. Pages überschreiben einzelne Felder.
+- **Reaktiv** — `useSeo`-`opts` dürfen Getter/`ref` sein und `useJsonLd` nimmt
+  auch eine Funktion/`computed`; Head + `@graph` **ziehen nach, wenn Content
+  async lädt** (Artikel-Seite).
 
 > **Voraussetzung:** `runtimeConfig.public.siteUrl` setzen (ohne Trailing-Slash,
 > z.B. `https://example.com`) — daraus baut der Layer canonical-Links, OG-URLs
 > und schema.org-`@id`s. Env: `NUXT_PUBLIC_SITE_URL`. Ohne `siteUrl` fallen
 > canonical/OG auf relative Pfade zurück.
 
-### `useSeo(opts)` — Title + Meta + OG/Twitter
+### Setup: der `jsonLD`-Defaults-Block (`app.config.ts`)
 
-In der `<script setup>` einer Page aufrufen. Setzt `<title>`, `description`,
-`<link rel=canonical>`, OG- und Twitter-Tags sowie `<html lang>`/`og:locale`
-(aus der aktiven i18n-Locale). Title wird per Default zu `"{title} | {appName}"`
-kombiniert.
+Pro Locale gepflegt; der Layer bringt **neutrale leere Placeholder** mit, du
+überschreibst sie im Projekt:
+
+```ts
+// my-project/app.config.ts
+export default defineAppConfig({
+  company: { name: 'My Company', legal: 'My Company GmbH', fon: '+49 …', mail: 'info@…',
+             ogImage: '/og-default.png' },   // default og:image (Fallback)
+  jsonLD: {
+    de: {
+      defaultTitle: 'My App — Claim',
+      defaultDesc:  'Standard-Beschreibung für Seiten ohne eigene.',
+      websiteName:  'My App',
+      websiteDesc:  'Was die Seite ist.',
+      organisation: 'My Company GmbH',
+      inLanguage:   'de-DE',
+      sameAs: ['https://www.linkedin.com/company/…'],
+      logo: { path: '/logo.png', width: 512, height: 512, caption: 'My Company' },
+    },
+    en: { /* … same shape … */ },
+  },
+})
+```
+
+`useSeo`/`useJsonLd` wählen automatisch den Block der aktiven i18n-Locale (Fallback:
+erste definierte Locale).
+
+### `useSeo(opts)` — Title + Meta + OG/Twitter (+ `article:*`)
+
+In der `<script setup>` einer Page (oder einem Layout für Sitewide-Defaults)
+aufrufen. Setzt `<title>`, `description`, `<link rel=canonical>`, **volle** OG-/
+Twitter-Tags, `<html lang>`/`og:locale` sowie — bei `datePublished`/`ogType:'article'`
+— `og:type=article` + `article:published_time`/`…modified_time`/`…publisher`.
+Title default `"{title} | {appName}"`. Fehlende Felder kommen aus dem `jsonLD`-Block.
 
 ```vue
 <script setup>
@@ -345,95 +385,125 @@ useSeo({
   // optional:
   image: { url: '/og/about.png', width: 1200, height: 630, alt: 'Über uns' },
   // ogType: 'article', canonical: '/ueber-uns', noindex: false,
+  // datePublished: '2026-01-01T…', dateModified: '2026-02-01T…',  // → article:*
   // titleTemplate: '%s — My App'  // oder false = nackter Title ohne App-Name
 })
 </script>
 ```
 
-`useSeo` gibt die aufgelösten Werte zurück (`{ title, description, canonical,
-lang, siteUrl }`) — praktisch, um sie direkt an `useJsonLd` weiterzureichen.
+> **⚠️ v0.3 — Rückgabewert ist jetzt reaktiv:** `useSeo` gibt
+> `{ siteUrl, title, description, canonical, lang }` als **`ComputedRef`** zurück.
+> Wer den `siteUrl`-Returnwert in einen String interpoliert, braucht `.value`
+> (`` `${siteUrl.value}${route.path}` ``). `opts`-Felder dürfen `ref`/Getter sein.
 
-### `useJsonLd(nodes, opts?)` — schema.org als `@graph`
+### `useJsonLd(nodes, opts?)` — schema.org als `@graph` (reaktiv)
 
 Injiziert ein oder mehrere schema.org-Nodes als **eine**
 `<script type="application/ld+json">`, automatisch in
 `{ "@context": "https://schema.org", "@graph": [...] }` gewrappt. Falsy-Einträge
-werden übersprungen (für bedingte Nodes). Die mitgelieferten **Builder** füllst
-du mit deinen eigenen Daten — das `@id`-Cross-Linking (logo↔org,
-website→publisher, webpage→website/breadcrumb/image) macht der Layer intern:
+werden übersprungen. `nodes` darf ein Node/Array **oder eine Funktion/`ref`/
+`computed`** sein (→ `@graph` re-rendert bei Änderung). Das `@id`-Cross-Linking
+(logo↔org, website→publisher, webpage→website/breadcrumb/image) macht der Layer
+intern. **`organization()`/`website()` ohne Args = vollständig aus dem
+`jsonLD`-Block:**
 
 | Builder | schema.org-Typ | `@id` |
 |---|---|---|
-| `organization({ siteUrl, name, telephone, email, sameAs, logo, extra })` | `Organization` (Typ via `type` änderbar, z.B. `LocalBusiness`) | `{siteUrl}#organization` |
-| `website({ siteUrl, name, description, inLanguage, searchAction, extra })` | `WebSite` | `{siteUrl}#website` |
-| `webPage({ siteUrl, url, name, description, datePublished, dateModified, breadcrumb, primaryImage, extra })` | `WebPage` | `{url}#webpage` |
+| `organization({ siteUrl?, name?, type?, telephone?, email?, sameAs?, logo?, extra? })` — ohne Args aus `jsonLD`/`company.*` | `Organization` (Typ änderbar, z.B. `LocalBusiness`) | `{siteUrl}#organization` |
+| `website({ siteUrl?, name?, description?, inLanguage?, searchAction?, extra? })` — ohne Args aus `jsonLD` | `WebSite` | `{siteUrl}#website` |
+| `webPage({ siteUrl?, url, name?, description?, datePublished?, dateModified?, breadcrumb?, primaryImage?, extra? })` | `WebPage` | `{url}#webpage` |
 | `breadcrumbList({ pageUrl, items: [{ name, item? }] })` | `BreadcrumbList` | `{pageUrl}#breadcrumb` |
-| `imageObject({ id, url, width, height, caption, inLanguage })` | `ImageObject` | dein `id` |
+| `imageObject({ id, url, width?, height?, caption?, thumbnailUrl?, inLanguage? })` | `ImageObject` | dein `id` |
 
 Die Builder sind sowohl Named-Exports als auch unter `useJsonLd.*` erreichbar.
 
-### Consumer-Wiring (3 Schritte)
+### Combined-Pattern (statische Seite)
 
-**1.** `siteUrl` in `runtimeConfig.public` setzen (s.o.) und Firmendaten in
-`app.config.ts` (`company.*`) pflegen.
-
-**2.** Eine Page (oder ein Layout) verdrahten — Daten aus `useConfig`:
+Ein Block `useSeo()` + `useJsonLd()` mit denselben per-Page-Daten — so wie
+keyhubs `buildHead` + `buildJsonLD` zusammen liefen. Org/Website kommen aus dem
+Config-Block (keine Args), nur die Page-Felder gibst du an:
 
 ```vue
 <script setup>
-const { CONFIG } = useConfig()
-
-const { siteUrl } = useSeo({ title: page.title, description: page.excerpt })
-
-const logo = useJsonLd.imageObject({
-  id: `${siteUrl}#logo`, url: `${siteUrl}/logo.png`,
-  width: 512, height: 512, caption: CONFIG('company.name'),
-})
+const { siteUrl } = useSeo({ title: page.title, description: page.excerpt,
+                             image: page.ogImage })   // sonst default-og:image aus jsonLD/company
 
 useJsonLd([
-  useJsonLd.organization({
-    siteUrl,
-    name: CONFIG('company.legal') || CONFIG('company.name'),
-    telephone: CONFIG('company.fon'),
-    email: CONFIG('company.mail'),
-    sameAs: ['https://www.linkedin.com/company/…'],
-    logo,
-  }),
-  useJsonLd.website({ siteUrl, name: CONFIG('appName'), inLanguage: 'de-DE' }),
+  useJsonLd.organization(),    // aus jsonLD-Block (name/logo/sameAs/telephone/email)
+  useJsonLd.website(),         // aus jsonLD-Block (name/description/inLanguage)
   useJsonLd.webPage({
-    siteUrl, url: `${siteUrl}${useRoute().path}`,
+    url: `${siteUrl.value}${useRoute().path}`,
     name: page.title, description: page.excerpt,
-    datePublished: page.publishedAt, dateModified: page.updatedAt,
-    breadcrumb: true, primaryImage: logo,
+    breadcrumb: true,
   }),
   useJsonLd.breadcrumbList({
-    pageUrl: `${siteUrl}${useRoute().path}`,
-    items: [{ name: 'Start', item: `${siteUrl}/` }, { name: page.title }],
+    pageUrl: `${siteUrl.value}${useRoute().path}`,
+    items: [{ name: 'Start', item: `${siteUrl.value}/` }, { name: page.title }],
   }),
-  logo,
 ])
 </script>
 ```
 
-**3.** Pro Content-Page nur die abweichenden Felder (Title/Desc/Image/Breadcrumb)
-übergeben; Org/Website kannst du einmal zentral in einem Layout setzen.
+> **Tipp:** `organization()`/`website()` einmal **zentral in einem Layout**
+> setzen; Content-Pages liefern dann nur noch `useSeo(...)` + `webPage(...)` mit
+> ihren eigenen Feldern.
+
+### Dynamic-Pattern (Artikel-Seite, reaktiv)
+
+Bei async geladenem Content **Getter/Funktionen** übergeben — Head + `@graph`
+ziehen nach, sobald die Daten da sind:
+
+```vue
+<script setup>
+const route = useRoute()
+const { data: article } = await useFetch(`/api/articles/${route.params.slug}`)
+
+const { siteUrl } = useSeo({
+  title:         () => article.value?.title,
+  description:   () => article.value?.excerpt,
+  image:         () => article.value?.ogImage,
+  datePublished: () => article.value?.publishedAt,   // → og:type=article + article:published_time
+  dateModified:  () => article.value?.updatedAt,
+})
+
+useJsonLd(() => {
+  const a = article.value
+  if (!a) return []                                  // noch nicht geladen → nichts emittieren
+  const url = `${siteUrl.value}${route.path}`
+  return [
+    useJsonLd.webPage({ url, name: a.title, description: a.excerpt,
+                        datePublished: a.publishedAt, dateModified: a.updatedAt,
+                        breadcrumb: true, primaryImage: true }),
+    useJsonLd.imageObject({ id: `${url}#primaryimage`, url: a.ogImage,
+                            width: a.ogImageWidth, height: a.ogImageHeight }),
+    useJsonLd.breadcrumbList({ pageUrl: url,
+      items: [{ name: 'Start', item: `${siteUrl.value}/` },
+              { name: 'Blog', item: `${siteUrl.value}/blog` }, { name: a.title }] }),
+  ]
+})
+</script>
+```
 
 ### keyhub-Migration (`mixins/jsonLDmixin.js` → Layer)
 
 Der Nuxt-2-Mixin (`buildHead`/`buildJsonLD`/`siteHeadMeta`) wird **komplett
 ersetzt**:
 
-- `buildHead(...)` + `siteHeadMeta` → ein `useSeo({ title, description, image })`-
-  Aufruf je Page. Die `og:image:width/height` etc. wandern in `image.{width,height}`.
+- Die Defaults aus dem Mixin (`defaultTitle`/`defaultDesc`/`jsonldWebsite`/
+  `jsonldOrg`/`defaultPublished`/…) wandern 1:1 in den **`jsonLD`-Block** von
+  keyhubs `app.config.ts` (+ `company.*` für Firma/Logo). Danach liefern
+  `organization()`/`website()` **ohne Args** denselben Graph.
+- `buildHead(...)` + `siteHeadMeta` → ein `useSeo({ title, description, image,
+  datePublished, dateModified })`-Aufruf je Page. `og:image:width/height` →
+  `image.{width,height}`; `article:*` ergibt sich aus `datePublished`.
 - `buildJsonLD(...)` → `useJsonLd([...])` mit den Buildern. Die hartcodierten
-  `jsonldOrg`/`jsonldWebsite`/`jsonldServices`-Blöcke + `SERVICE_AREA` ziehst du
-  als **echte Daten** ins keyhub-Projekt (`app.config.ts` für Firmendaten,
-  CMS/Konstanten für Services) und reichst sie via `extra` an `organization(...)`
-  durch (`extra: { areaServed: [...], makesOffer: [...] }`) — der Layer trägt
-  **keine** Schlüsseldienst-Daten.
+  `jsonldServices`-Blöcke + `SERVICE_AREA` ziehst du als **echte Daten** ins
+  keyhub-Projekt (CMS/Konstanten) und reichst sie via `extra` an
+  `organization(...)` durch (`extra: { areaServed: [...], makesOffer: [...] }`) —
+  der Layer trägt **keine** Schlüsseldienst-Daten.
 - `this.$route.path` + `appDomain` → `useRoute().path` + `runtimeConfig.public.siteUrl`.
-- `inLanguage: 'de-DE'` / `og:locale` ergeben sich aus der i18n-Locale (oder
-  explizit via `useSeo({ lang: 'de-DE' })`).
+- `inLanguage`/`og:locale` ergeben sich aus der i18n-Locale bzw. `jsonLD.inLanguage`
+  (oder explizit via `useSeo({ lang: 'de-DE' })`).
 
 ---
 

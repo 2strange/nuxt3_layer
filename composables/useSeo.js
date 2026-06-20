@@ -1,11 +1,23 @@
 // Generic SEO-head composable. Sets <title>, meta description, canonical and
-// the OpenGraph/Twitter tags via Nuxt's useHead + useSeoMeta — zero extra
-// runtime deps. ALL data flows in from the consumer: the per-call `opts`, the
-// layer's app.config (`company.*`) and runtimeConfig (`public.appName`,
-// `public.siteUrl`). NOTHING project-specific is hardcoded here.
+// the full OpenGraph/Twitter tag set via Nuxt's useHead + useSeoMeta — zero
+// extra runtime deps. ALL data flows in from the consumer: per-call `opts`, the
+// layer's `jsonLD` config defaults (app.config, per locale), `company.*` and
+// runtimeConfig (`appName`, `siteUrl`). NOTHING project-specific is hardcoded.
+//
+// Philosophy (Austin's OG-unfurl lesson): a COMPLETE OG card + STRONG defaults +
+// per-content dynamics beat "elegant" minimalism. So even a page that passes no
+// data gets a full card from the jsonLD defaults block; pages override per-field.
+//
+// REACTIVE: `opts` values may be refs/getters/computed — they're read inside the
+// reactive useHead/useSeoMeta callbacks, so the head follows async content
+// (e.g. an article page whose data loads after mount). Do NOT snapshot.
 //
 // Derived from slots_frontend's useSeo (title + lang + OG) and the generic
-// OG/Twitter assembly in keyhub's jsonLDmixin, parameterized for the layer.
+// OG/article assembly + defaults discipline in keyhub's jsonLDmixin / hof's
+// config-driven app.config['jsonLD'][locale], parameterized for the layer.
+
+import { computed, unref } from 'vue'
+import { seoDefaults, resolveSiteUrl, absoluteUrl, ogLocale } from '~/utils/seo'
 
 /**
  * @typedef {Object} SeoImage
@@ -19,159 +31,155 @@
 
 /**
  * @typedef {Object} SeoOptions
+ * Every field may be a plain value OR a ref/computed/getter — read reactively.
  * @property {string}  [title]           Page title. Combined with the app name as
  *                                       `"{title} | {appName}"` unless `titleTemplate` is given.
- * @property {string}  [description]     Meta + og:description.
+ *                                       Falls back to `jsonLD[locale].defaultTitle`.
+ * @property {string}  [description]     Meta + og:description. Falls back to `jsonLD[locale].defaultDesc`.
  * @property {string|false} [titleTemplate]  Override the `"%s | {appName}"` template. Pass a string
- *                                       with `%s` as the title placeholder, or `false` to use the
- *                                       bare title with no app-name suffix.
- * @property {string}  [canonical]       Canonical URL. Defaults to `{siteUrl}{route.path}`. Pass
- *                                       an absolute URL or a root-relative path.
- * @property {string}  [ogType]          OpenGraph type (default `'website'`).
+ *                                       with `%s` as the title placeholder, or `false` for the bare title.
+ * @property {string}  [canonical]       Canonical URL. Defaults to `{siteUrl}{route.path}`.
+ * @property {string}  [ogType]          OpenGraph type. Default `'website'`, or `'article'` when
+ *                                       `datePublished`/`dateModified` is set.
  * @property {SeoImage|string} [image]   OG/Twitter image. A bare string is treated as `{ url }`.
+ *                                       Falls back to the default OG image (jsonLD.logo / company.ogImage).
  * @property {string}  [twitterCard]     Twitter card type (default `'summary_large_image'`).
- * @property {string}  [lang]            BCP-47 lang for <html lang> + og:locale. Defaults to the
- *                                       active i18n locale (mapped via `localeMap`), else `'de-DE'`.
- * @property {Object<string,string>} [localeMap]  Override the i18n-code → BCP-47 map
- *                                       (default `{ de:'de-DE', en:'en-US' }`).
+ * @property {string}  [lang]            BCP-47 lang for <html lang> + og:locale. Defaults to
+ *                                       `jsonLD[locale].inLanguage`, then the i18n locale, then `'de-DE'`.
+ * @property {string}  [datePublished]   ISO 8601 → article:published_time (and forces og:type=article).
+ * @property {string}  [dateModified]    ISO 8601 → article:modified_time.
+ * @property {string}  [publisher]       article:publisher. Falls back to `jsonLD[locale].organisation`.
  * @property {boolean} [noindex]         When true, emits `<meta name="robots" content="noindex,nofollow">`.
  */
 
 /**
- * Apply SEO head tags (title, description, canonical, OG, Twitter, html lang)
- * for the current page. Call once from a page's `<script setup>`.
+ * Apply SEO head tags (title, description, canonical, full OG + Twitter, html
+ * lang, article:* ) for the current page. Call once from a page's `<script setup>`
+ * (or a layout, for sitewide defaults). Reactive: pass refs/getters for fields
+ * that load async.
  *
- * Data sources (consumer-provided, nothing hardcoded):
- *  - `opts`                     — per-call overrides (title/description/image/…)
- *  - `runtimeConfig.public.appName`  — title-template suffix + og:site_name
- *  - `runtimeConfig.public.siteUrl`  — base URL for canonical + root-relative images
- *  - active i18n locale         — <html lang> + og:locale
+ * Data sources (consumer-provided, nothing hardcoded), in priority order:
+ *  1. `opts` (per-call)
+ *  2. `jsonLD[locale]` defaults block (app.config) — defaultTitle/defaultDesc/logo/organisation/inLanguage
+ *  3. `runtimeConfig.public.appName` / `siteUrl`, `company.*`
  *
- * SSR-safe: useHead/useSeoMeta run on both server and client.
+ * SSR-safe.
  *
  * @param {SeoOptions} [opts={}]
- * @returns {{ title: string, description: string, canonical: string, lang: string, siteUrl: string }}
- *          The resolved values (handy for tests / passing into useJsonLd).
+ * @returns {{ siteUrl: import('vue').ComputedRef<string>,
+ *             title: import('vue').ComputedRef<string>,
+ *             description: import('vue').ComputedRef<string>,
+ *             canonical: import('vue').ComputedRef<string>,
+ *             lang: import('vue').ComputedRef<string> }}
+ *          Reactive resolved values (handy for tests / feeding useJsonLd).
  *
  * @example
- * // pages/about.vue
- * <script setup>
+ * // Static page — full card from defaults + page title:
  * useSeo({ title: 'Über uns', description: 'Wer wir sind.' })
- * </script>
  *
  * @example
- * // With an OG image pulled from app.config / a CMS field:
- * const { appConfig } = useConfig()
+ * // Dynamic article — reactive opts follow the async-loaded data:
+ * const { data: article } = await useFetch(`/api/articles/${slug}`)
  * useSeo({
- *   title: page.title,
- *   description: page.excerpt,
- *   image: { url: page.ogImage, width: 1200, height: 630, alt: page.title },
+ *   title:       () => article.value?.title,
+ *   description: () => article.value?.excerpt,
+ *   image:       () => article.value?.ogImage,
+ *   datePublished: () => article.value?.publishedAt,   // → og:type=article + article:published_time
+ *   dateModified:  () => article.value?.updatedAt,
  * })
  */
 export function useSeo(opts = {}) {
   const route = useRoute()
   const { CONFIG } = useConfig()
 
-  const siteUrl = resolveSiteUrl(CONFIG)
-  const appName = CONFIG('appName') || CONFIG('company.name') || ''
-  const lang = opts.lang || resolveLang(opts.localeMap)
+  // read(field): unwraps refs and calls getter-functions, so opts stay reactive.
+  const read = (v) => (typeof v === 'function' ? v() : unref(v))
 
-  // Title: explicit template wins; `false` = bare title; else "{title} | {appName}".
-  let title
-  if (opts.titleTemplate === false) {
-    title = opts.title || appName
-  } else if (typeof opts.titleTemplate === 'string') {
-    title = opts.title ? opts.titleTemplate.replace('%s', opts.title) : appName
-  } else {
-    title = opts.title && appName ? `${opts.title} | ${appName}` : (opts.title || appName)
-  }
+  const siteUrl = computed(() => resolveSiteUrl(CONFIG))
+  const appName = computed(() => CONFIG('appName') || CONFIG('company.name') || '')
+  const lang = computed(() => read(opts.lang) || resolveLang(CONFIG))
+  const def = computed(() => seoDefaults(CONFIG, lang.value))
 
-  const description = opts.description || ''
-  const canonical = absoluteUrl(opts.canonical || `${route.path}`, siteUrl)
-  const ogType = opts.ogType || 'website'
-  const twitterCard = opts.twitterCard || 'summary_large_image'
-
-  const img = typeof opts.image === 'string' ? { url: opts.image } : opts.image
-  const imageUrl = img?.url ? absoluteUrl(img.url, siteUrl) : undefined
-
-  useHead({
-    htmlAttrs: { lang },
-    link: canonical ? [{ rel: 'canonical', href: canonical }] : [],
-    meta: opts.noindex ? [{ name: 'robots', content: 'noindex,nofollow' }] : [],
+  const title = computed(() => {
+    const t = read(opts.title) || def.value.defaultTitle || ''
+    const tpl = read(opts.titleTemplate)
+    if (tpl === false) return t || appName.value
+    if (typeof tpl === 'string') return t ? tpl.replace('%s', t) : appName.value
+    return t && appName.value && t !== appName.value ? `${t} | ${appName.value}` : (t || appName.value)
   })
+
+  const description = computed(() => read(opts.description) || def.value.defaultDesc || '')
+  const canonical = computed(() => absoluteUrl(read(opts.canonical) || `${route.path}`, siteUrl.value))
+
+  const datePublished = computed(() => read(opts.datePublished) || undefined)
+  const dateModified = computed(() => read(opts.dateModified) || undefined)
+  const isArticle = computed(() => read(opts.ogType) === 'article' || !!datePublished.value)
+  const ogType = computed(() => read(opts.ogType) || (isArticle.value ? 'article' : 'website'))
+  const publisher = computed(() => read(opts.publisher) || def.value.organisation || undefined)
+
+  const image = computed(() => {
+    const raw = read(opts.image)
+    const img = typeof raw === 'string' ? { url: raw } : raw
+    if (img?.url) return { ...img, url: absoluteUrl(img.url, siteUrl.value) }
+    // Default OG image: explicit company.ogImage, else the org logo, else /og-default.png.
+    const fallback = CONFIG('company.ogImage') || def.value.logo?.path || '/og-default.png'
+    const url = absoluteUrl(fallback, siteUrl.value)
+    return url ? { url, width: def.value.logo?.width || undefined, height: def.value.logo?.height || undefined } : undefined
+  })
+
+  useHead(() => ({
+    htmlAttrs: { lang: lang.value },
+    link: canonical.value ? [{ rel: 'canonical', href: canonical.value }] : [],
+    meta: read(opts.noindex) ? [{ name: 'robots', content: 'noindex,nofollow' }] : [],
+  }))
 
   // useSeoMeta dedupes by key and drops undefined entries, so unset fields emit nothing.
-  useSeoMeta({
-    title,
-    description: description || undefined,
-    ogType,
-    ogTitle: title,
-    ogDescription: description || undefined,
-    ogUrl: canonical || undefined,
-    ogSiteName: appName || undefined,
-    ogLocale: ogLocale(lang),
-    ogImage: imageUrl,
-    ogImageWidth: img?.width,
-    ogImageHeight: img?.height,
-    ogImageAlt: img?.alt,
-    ogImageType: img?.type,
-    twitterCard,
-    twitterTitle: title,
-    twitterDescription: description || undefined,
-    twitterImage: imageUrl,
+  useSeoMeta(() => {
+    const img = image.value
+    const desc = description.value || undefined
+    return {
+      title: title.value,
+      description: desc,
+      ogType: ogType.value,
+      ogTitle: title.value,
+      ogDescription: desc,
+      ogUrl: canonical.value || undefined,
+      ogSiteName: appName.value || undefined,
+      ogLocale: ogLocale(lang.value),
+      ogImage: img?.url,
+      ogImageWidth: img?.width,
+      ogImageHeight: img?.height,
+      ogImageAlt: img?.alt,
+      ogImageType: img?.type,
+      twitterCard: read(opts.twitterCard) || 'summary_large_image',
+      twitterTitle: title.value,
+      twitterDescription: desc,
+      twitterImage: img?.url,
+      // article:* — only when this is an article (datePublished or ogType==='article').
+      articlePublishedTime: isArticle.value ? datePublished.value : undefined,
+      articleModifiedTime: isArticle.value ? dateModified.value : undefined,
+      articlePublisher: isArticle.value ? publisher.value : undefined,
+    }
   })
 
-  return { title, description, canonical, lang, siteUrl }
+  return { siteUrl, title, description, canonical, lang }
 }
 
 /**
- * Resolve the site base URL from config, normalized without a trailing slash.
- * Reads `siteUrl` (preferred) then `websiteUrl` (slots-compat) from
- * runtimeConfig.public / app.config via the passed CONFIG lookup.
- * @param {(key: string) => any} CONFIG  The CONFIG fn from useConfig().
- * @returns {string} e.g. `'https://example.com'`, or `''` if unconfigured.
- */
-export function resolveSiteUrl(CONFIG) {
-  const raw = CONFIG('siteUrl') || CONFIG('websiteUrl') || ''
-  return `${raw}`.replace(/\/+$/, '')
-}
-
-/**
- * Turn a possibly-relative URL into an absolute one using the site base URL.
- * Absolute inputs (`http(s)://…`) are returned unchanged.
- * @param {string} url
- * @param {string} siteUrl  Base URL without trailing slash.
+ * Resolve the active language as a BCP-47 tag: jsonLD[locale].inLanguage wins,
+ * then the i18n locale (mapped), else `'de-DE'`. Safe when i18n is absent.
+ * @param {(key: string) => any} CONFIG
  * @returns {string}
  */
-export function absoluteUrl(url, siteUrl) {
-  if (!url) return ''
-  if (/^https?:\/\//i.test(url)) return url
-  const path = url.startsWith('/') ? url : `/${url}`
-  return `${siteUrl}${path}`
-}
-
-/**
- * Map the active i18n locale code to a BCP-47 tag. Falls back to `'de-DE'`.
- * Safe to call when @nuxtjs/i18n is absent (returns the fallback).
- * @param {Object<string,string>} [localeMap]
- * @returns {string}
- */
-function resolveLang(localeMap) {
-  const map = { de: 'de-DE', en: 'en-US', fr: 'fr-FR', it: 'it-IT', ...(localeMap || {}) }
+function resolveLang(CONFIG) {
   let code
   try {
     code = useNuxtApp().$i18n?.locale?.value
   } catch {
     code = undefined
   }
+  const fromConfig = seoDefaults(CONFIG, code).inLanguage
+  if (fromConfig) return fromConfig
+  const map = { de: 'de-DE', en: 'en-US', fr: 'fr-FR', it: 'it-IT' }
   return map[code] || 'de-DE'
-}
-
-/**
- * Convert a BCP-47 tag (`de-DE`) to the underscore form OG expects (`de_DE`).
- * @param {string} lang
- * @returns {string}
- */
-function ogLocale(lang) {
-  return `${lang || 'de-DE'}`.replace('-', '_')
 }
