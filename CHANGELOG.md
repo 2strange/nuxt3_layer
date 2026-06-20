@@ -3,6 +3,41 @@
 Alle nennenswerten Änderungen am Layer. Konsumprojekte pinnen am besten auf den
 jeweiligen Release-Tag (`extends: ['github:2strange/nuxt3_layer#v0.1.2']`).
 
+## v0.2.0 — 2026-06-20
+
+**SEO + JSON-LD (Batch C)** — zwei neue, generische Composables für Title/OG/
+Twitter-Meta und schema.org-Strukturdaten. **Lean, keine neue Runtime-Dependency**
+(`nuxt-schema-org`/`@nuxtjs/seo` bewusst NICHT eingezogen) — alles über Nuxts
+`useHead`/`useSeoMeta`. Rein additiv, backward-kompatibel: bestehende Konsumenten
+ohne SEO-Aufrufe bekommen null Verhaltensänderung. (Branch `claude`.)
+
+- **feat:** `composables/useSeo.js` — generischer SEO-Head: `title`
+  (+ `"{title} | {appName}"`-Template, override-/abschaltbar), `description`,
+  `canonical`, OG/Twitter (inkl. `og:image` + width/height/alt/type),
+  `og:locale`/`<html lang>` (aus aktiver i18n-Locale, mapbar), `noindex`. Alle
+  Daten aus `opts` / `useConfig` (`appName`, `company.*`) / `runtimeConfig`
+  (`siteUrl`). Gibt die aufgelösten Werte zurück (`{ title, description,
+  canonical, lang, siteUrl }`) — handlich für `useJsonLd`/Tests. SSR-safe.
+- **feat:** `composables/useJsonLd.js` — injiziert schema.org-Nodes als **eine**
+  `<script type="application/ld+json">` (`@graph`-gewrappt) via `useHead`,
+  SSR-safe. JSDoc-typisierte Builder `organization`, `website`, `webPage`,
+  `breadcrumbList`, `imageObject` (als Named-Exports **und** auf `useJsonLd.*`).
+  Das **`@id`-Cross-Linking** (logo↔org, website→publisher, webpage→website/
+  breadcrumb/primaryImage) macht das Composable intern — Consumer liefern nur
+  ihre Daten, kämpfen nicht mit dem Graph. Leere/undefined-Felder werden
+  rausgepruned (lean Output).
+- **feat (config):** `runtimeConfig.public.siteUrl: ''` im Layer deklariert
+  (kanonische Public-Site-URL, env-driven via `NUXT_PUBLIC_SITE_URL`). Leerer
+  Default → relative Fallbacks; Consumer setzt die echte URL. `useSeo` liest
+  zusätzlich `websiteUrl` (slots-Kompat).
+- **docs:** README §SEO (Consumer-Wiring in 3 Schritten + keyhub-Migration als
+  `jsonLDmixin.js`-Ersatz), CLAUDE.md-Hinweis, Demo-`pages/index.vue` zeigt das
+  Wiring aus `app.config` `company.*`.
+- **Extrahiert aus** (read-only, OHNE Domain-Daten): keyhubs `jsonLDmixin.js`
+  (generische `@graph`/`@id`-Assembly) + slots' `useSeo.ts` (Title/Lang/OG-Form).
+  Customer-Daten (Service-Area, Firmenname, Service-Typen) **bewusst NICHT**
+  übernommen — die kommen pro Projekt rein.
+
 ## v0.1.5 — 2026-06-14
 
 **A2 Content-Refresh (opt-in)** — FE-Gegenpart zum Deploy-Gem

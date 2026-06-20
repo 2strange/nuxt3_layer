@@ -28,6 +28,7 @@
               <p><b>App:</b> {{ runtime.public.appName }}</p>
               <p><b>API:</b> {{ runtime.public.apiBase || '(nicht gesetzt)' }}</p>
               <p><b>Mode:</b> {{ runtime.public.deployMode }}</p>
+              <p><b>Site-URL:</b> {{ runtime.public.siteUrl || '(nicht gesetzt)' }}</p>
             </v-card-text>
           </v-card>
         </v-col>
@@ -44,4 +45,38 @@ const runtime = useRuntimeConfig()
 async function logout() {
   await doLogout()
 }
+
+// --- SEO + JSON-LD demo --------------------------------------------------
+// Shows how a CONSUMER (e.g. keyhub) wires the layer's useSeo/useJsonLd,
+// pulling ALL data from app.config (company.*) + runtimeConfig (siteUrl/appName).
+// Nothing project-specific is hardcoded — swap in your own data per page.
+const { CONFIG, appConfig } = useConfig()
+
+const { siteUrl } = useSeo({
+  title: 'Start',
+  description: `Standalone-Demo des nuxt3_layer für ${CONFIG('appName')}.`,
+  // image: { url: '/og-default.png', width: 1200, height: 630 },
+})
+
+const logo = useJsonLd.imageObject({
+  id: `${siteUrl}#logo`,
+  url: `${siteUrl}/logo.png`,
+  caption: CONFIG('company.name') || CONFIG('appName'),
+})
+
+useJsonLd([
+  useJsonLd.organization({
+    siteUrl,
+    name: CONFIG('company.legal') || CONFIG('company.name') || CONFIG('appName'),
+    telephone: CONFIG('company.fon') || undefined,
+    email: CONFIG('company.mail') || undefined,
+    logo,
+  }),
+  useJsonLd.website({
+    siteUrl,
+    name: CONFIG('appName'),
+    inLanguage: 'de-DE',
+  }),
+  logo,
+])
 </script>

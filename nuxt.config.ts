@@ -72,6 +72,11 @@ export default defineNuxtConfig({
       apiBase: '',
       appName: 'App',
       deployMode: 'development',
+      // Canonical public site URL (e.g. https://example.com), no trailing slash.
+      // Used by useSeo/useJsonLd for canonical links, OG URLs and schema.org @ids.
+      // Empty default = consumers MUST set it (NUXT_PUBLIC_SITE_URL) to get
+      // absolute SEO URLs; otherwise canonical/OG fall back to relative paths.
+      siteUrl: '',
     },
     apiBaseServer: '',
     // A2 Content-Refresh (opt-in): token that guards server/api/_purge.

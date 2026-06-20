@@ -75,6 +75,14 @@ Bei Breaking Changes → in der README + BACKLOG notieren, Major-Version bumpen.
   `main.sass` (Reset + `pa-*`/`d-flex`/`ga-*`-Utilities) still aus dem Build
   (virtuelles SASS-Modul, von Nuxt nicht extrahiert). Body-Font = `.v-application`-
   Regel in `assets/styles/app.scss` (nicht mehr `$body-font-family`-Override).
+- **SEO/JSON-LD (seit v0.2.0):** `useSeo()` (Title/Description/canonical +
+  OG/Twitter via `useHead`/`useSeoMeta`) und `useJsonLd()` (schema.org-`@graph`
+  via `useHead`) — **lean, keine extra Runtime-Dep**. Alle Daten aus `opts` /
+  `useConfig` (`appName`, `company.*`) / `runtimeConfig.public.siteUrl` —
+  **nichts hardcoden**. `useJsonLd`-Builder (`organization`/`website`/`webPage`/
+  `breadcrumbList`/`imageObject`) verdrahten `@id`-Cross-Links intern. Neuer
+  Config-Key `runtimeConfig.public.siteUrl` (kanonische Public-URL,
+  `NUXT_PUBLIC_SITE_URL`). Consumer-Setup: README §SEO.
 - **A2 Content-Refresh (opt-in):** Nitro-Server-Route
   `server/api/_purge.post.ts` leert on-demand den `swr`-routeRules-Cache.
   Auth-gated via `runtimeConfig.purgeToken` (`NUXT_PURGE_TOKEN`, **server-only,
