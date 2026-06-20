@@ -20,6 +20,9 @@ const THEME_COLORS = {
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
 
+  // [pilot/nuxt4] Nuxt-4-Defaults aktiv (flache Struktur bleibt, app/ nicht erzwungen).
+  future: { compatibilityVersion: 4 },
+
   // @pinia/nuxt only scans the CONSUMING project's stores/ by default, so layer
   // stores (useAuthStore, useAppStore) go missing in projects that `extends` us.
   // Point it at THIS layer's stores via an absolute path; keep 'stores' so each
@@ -87,6 +90,9 @@ export default defineNuxtConfig({
   },
 
   i18n: {
+    // [pilot/nuxt4] i18n v10 wirft unter Nuxt 4 eine optimizeTranslationDirective-
+    // Warn (Linus' Befund) → bewusst aus (klassische Render-Pfade).
+    optimizeTranslationDirective: false,
     strategy: 'prefix_except_default',
     defaultLocale: 'de',
     locales: [
