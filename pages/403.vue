@@ -49,6 +49,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import { log } from '~/services/log'
 
 const auth = useAuthStore()
 const { loginLocal } = useAuth()
@@ -62,7 +63,7 @@ const error = ref('')
 const formEl = ref(null)
 
 async function doLogin() {
-  console.log('[403/login] doLogin start')
+  log.info('[403/login] doLogin start')
   const result = await formEl.value?.validate()
   if (result && result.valid === false) return
   error.value = ''
@@ -72,7 +73,7 @@ async function doLogin() {
     const back = route.query.back ? String(route.query.back) : '/'
     router.push(back)
   } catch (e) {
-    console.error('[403/login] failed', e, e?.data)
+    log.warn('[403/login] failed:', e?.message || String(e)) // never log e.data (may echo secrets)
     const serverMsg = e?.data?.error || e?.data?.message || e?.message || 'Falsche Zugangsdaten'
     error.value = String(serverMsg)
   }

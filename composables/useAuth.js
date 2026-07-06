@@ -8,7 +8,7 @@ export function useAuth() {
   const api = useApi()
 
   async function loginLocal({ email, password, realm }) {
-    log.info('[auth] loginLocal →', email, realm ? `(realm: ${realm})` : '')
+    log.info('[auth] loginLocal', realm ? `(realm: ${realm})` : '') // no email (PII)
     auth.loading = true
     auth.lastError = null
     try {
@@ -16,15 +16,16 @@ export function useAuth() {
       const userPayload = { email, password }
       if (realm) userPayload.realm = realm
       const resp = await api.post('auth/login', { user: userPayload })
-      log.info('[auth] login response', resp)
+      // NEVER log the response — it carries the JWT. Log only a non-sensitive marker.
+      log.info('[auth] login response received, token present:', !!(resp?.token || resp?.data?.token))
       // Rails returns either { token: '...' } or wraps it.
       const token = resp?.token || resp?.data?.token
-      if (!token) throw new Error('No token in login response: ' + JSON.stringify(resp))
+      if (!token) throw new Error('No token in login response') // don't stringify resp (may carry secrets)
       auth.setToken(token)
       await fetchUser()
       return auth.user
     } catch (err) {
-      log.warn('[auth] loginLocal failed', err)
+      log.warn('[auth] loginLocal failed:', err?.message || String(err)) // message only — err body may echo secrets
       auth.lastError = err
       auth.reset()
       throw err
@@ -37,7 +38,7 @@ export function useAuth() {
     if (!auth.token) return null
     try {
       const resp = await api.get('auth/user')
-      log.info('[auth] /auth/user response', resp)
+      log.info('[auth] /auth/user response received') // never log the response (PII/token)
       // Rails returns a flat hash (get_user_json) — no { data: ... } wrapper.
       // But also handle JSON:API-style responses just in case.
       const userData = resp?.data?.attributes
@@ -46,7 +47,7 @@ export function useAuth() {
       auth.setUser(userData)
       return auth.user
     } catch (err) {
-      log.warn('[auth] fetchUser failed', err)
+      log.warn('[auth] fetchUser failed:', err?.message || String(err)) // message only — err body may echo secrets
       // Only an explicit auth rejection (401/403) invalidates the session.
       // Network errors / 5xx must NOT nuke the auth state — the token may
       // still be perfectly valid. (useApi additionally handles 401/402/403
@@ -62,7 +63,7 @@ export function useAuth() {
       // Devise path_names in this project: { sign_out: 'logout' }
       if (auth.token) await api.destroy('auth/logout')
     } catch (err) {
-      log.warn('logout endpoint failed (ignored)', err)
+      log.warn('logout endpoint failed (ignored):', err?.message || String(err))
     } finally {
       auth.reset()
     }

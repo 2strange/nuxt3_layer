@@ -3,6 +3,25 @@
 Alle nennenswerten Änderungen am Layer. Konsumprojekte pinnen am besten auf den
 jeweiligen Release-Tag (`extends: ['github:2strange/nuxt3_layer#v0.1.2']`).
 
+## v0.3.1 — 2026-07-06
+
+**🔒 Security-Fix: keine Credentials mehr in der Browser-Konsole.** Der Layer-Logger
+gab in Auth-/Login-Pfaden JWT-Token, E-Mail und volle API-Response-Bodies aus — teils
+über **ungegatete `console.*`** in ausgelieferten Default-Pages (`pages/crew/login.vue`,
+`pages/403.vue`), die auch in **production** feuerten. (Gemeldet von ValidSlots/Klaus, Fund #10.)
+
+- **Prod-Gate gehärtet** (`services/log.js`): Dev-Erkennung jetzt über `import.meta.dev`
+  (Nuxt/Vite-zuverlässig in Client + Server) statt `process.env.NODE_ENV` (client-seitig
+  gestrippt → Gate feuerte nicht → `info`/`debug` leakten). **Default = production/quiet**,
+  chatty nur bei positiv erkanntem Dev. ⚠️ Verhaltensänderung: Staging-Konsolen-Debug ist
+  jetzt bewusst still (nur `error`), außer in echtem Dev.
+- **Secrets aus allen Auth-/API-Logs gescrubbt:** `useAuth` (login-/user-Response, E-Mail),
+  `useApi` (Error-Response-Body), `pages/crew/login.vue` + `pages/403.vue` (User-Objekt,
+  `e.data`/`e.response`) → nur noch nicht-sensible Marker; `console.*` in den Default-Pages
+  auf den gegateten `log` umgestellt.
+- Rein additiv/backward-kompatibel (keine API-Änderung). Konsumenten: auf `#v0.3.1` pinnen;
+  interim client-seitige Log-Gates (z.B. Vite-Transforms) können danach raus.
+
 ## v0.3.0 — 2026-06-20
 
 **SEO-Upgrade: reaktiv + config-getrieben + volle OG-Defaults** — baut additiv

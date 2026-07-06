@@ -52,6 +52,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import { log } from '~/services/log'
 
 definePageMeta({ middleware: 'guest' })
 
@@ -69,20 +70,20 @@ const error = ref('')
 const formEl = ref(null)
 
 async function doLogin() {
-  console.log('[login] doLogin start', { email: user.email })
+  log.info('[login] doLogin start') // no email (PII)
   const result = await formEl.value?.validate()
-  console.log('[login] validation', result)
+  log.debug('[login] validation', result?.valid)
   if (result && result.valid === false) return
 
   error.value = ''
   try {
-    const u = await loginLocal(user)
-    console.log('[login] success', u)
+    await loginLocal(user)
+    log.info('[login] success') // never log the user object
     toast.success(t('auth.loggedIn'))
     const back = route.query.back ? String(route.query.back) : '/'
     router.push(back)
   } catch (e) {
-    console.error('[login] failed', e, e?.data, e?.response)
+    log.warn('[login] failed:', e?.message || String(e)) // never log e.data/e.response (may echo secrets)
     const serverMsg =
       e?.data?.error || e?.data?.message || e?.message || t('auth.wrongCredentials')
     error.value = String(serverMsg)
