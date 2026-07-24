@@ -9,6 +9,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
+    "test": "node --test test/*.test.mjs",
     "verify:purge": "bash test/run-purge-verify.sh",
     "postinstall": "if command -v nuxt >/dev/null; then nuxt prepare; fi"
   },
