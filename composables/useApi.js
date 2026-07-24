@@ -1,4 +1,4 @@
-import { apiPath, backendPath, adminPath, sendOptions, sendObjekt } from '~/utils/api'
+import { apiPath, backendPath, adminPath, isSameRoutePath, sendOptions, sendObjekt } from '~/utils/api'
 import { log } from '~/services/log'
 
 // Lazily-built ofetch instance with auth headers and base URL.
@@ -25,8 +25,11 @@ function buildFetch() {
       log.warn('[api] error', response?.status, response?._data)
       if (response?.status && [401, 402, 403].includes(response.status)) {
         authStore.reset()
-        if (import.meta.client && window.location.pathname !== '/403' && window.location.pathname !== '/crew/login') {
-          navigateTo('/403')
+        if (import.meta.client) {
+          const currentPath = window.location.pathname
+          if (!isSameRoutePath(currentPath, '/403') && !isSameRoutePath(currentPath, '/crew/login')) {
+            navigateTo('/403')
+          }
         }
       }
     },

@@ -2,6 +2,18 @@
 // In Nuxt 3 we use $fetch which respects a baseURL configured in useApi(),
 // so these functions just produce the *relative* path.
 
+/**
+ * Compare route paths while treating trailing slashes as insignificant.
+ *
+ * @param {string} pathname
+ * @param {string} routePath
+ * @returns {boolean}
+ */
+export function isSameRoutePath(pathname, routePath) {
+  const normalize = (path) => path.replace(/\/+$/, '') || '/'
+  return normalize(pathname) === normalize(routePath)
+}
+
 export function appPath(locale, prefix, path, objektOrId = null) {
   let newPath = `${locale ? '/' + locale : ''}${prefix}`
   if (String(path)[0] === '/') {
