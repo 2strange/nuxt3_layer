@@ -22,7 +22,7 @@ function buildFetch() {
       options.headers = headers
     },
     onResponseError({ response }) {
-      log.warn('[api] error', response?.status, response?._data)
+      log.warn('[api] error', response?.status) // no response._data (may echo secrets)
       if (response?.status && [401, 402, 403].includes(response.status)) {
         authStore.reset()
         if (import.meta.client && window.location.pathname !== '/403' && window.location.pathname !== '/crew/login') {
