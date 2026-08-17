@@ -3,6 +3,43 @@
 Alle nennenswerten Änderungen am Layer. Konsumprojekte pinnen am besten auf den
 jeweiligen Release-Tag (`extends: ['github:2strange/nuxt3_layer#v0.1.2']`).
 
+## v0.4.0 — 2026-08-18
+
+**Hänge-Fix: `useApi()` kann nicht mehr ewig pending bleiben.** Die geteilte
+`$fetch.create()`-Instanz lief **ohne `timeout`**. `ofetch` legt einen
+`AbortController` aber **nur** an, wenn `timeout` gesetzt ist
+(`ofetch@1.5.1`, `dist/shared/ofetch.CWycOUEr.mjs:261`) — ohne ihn bleibt ein
+Request, dessen Verbindung mitten drin hängt (kein sofortiger Verbindungsfehler),
+**für immer pending**: kein `catch`, kein `finally`, kein Fehler. Praktische
+Folge: Spinner drehen ewig, und `finally`-Blöcke laufen nie — u.a. der
+`auth.reset()` in `useAuth().logout()`. Ein Nutzer drückt „Abmelden", sieht
+nichts passieren und lässt ein Gerät mit **aktiver Sitzung** liegen.
+(Gemeldet von KeyHub/Riker, belegt an der ofetch-Quelle.)
+
+- **feat:** Instanz-Fallback-Timeout auf `useApi()`, Default **120 s**, per
+  Projekt über `runtimeConfig.public.apiTimeout` (`NUXT_PUBLIC_API_TIMEOUT`)
+  überschreibbar. ⚠️ **Verhaltensänderung:** Requests, die vorher unbegrenzt
+  liefen, brechen jetzt nach 120 s mit einem `TimeoutError` ab. Der Wert ist
+  bewusst großzügig — er soll nur echte Hänger fangen, keine langsamen Requests.
+  **Wichtig:** das Fenster deckt Server-Denkzeit **und den Upload des
+  Request-Bodies** ab (es endet, sobald die Response-Header da sind — große
+  Downloads sind nicht betroffen). Projekte mit sehr großen Uploads auf langsamen
+  Leitungen prüfen den Wert bzw. heben ihn pro Aufruf an.
+- **feat:** Engerer Timeout für `DELETE auth/logout` in `useAuth().logout()`,
+  Default **10 s**, über `runtimeConfig.public.apiLogoutTimeout` konfigurierbar
+  und auf `apiTimeout` geklemmt (kann nur verkürzen, nie verlängern). Begründung:
+  nur beim Abmelden erzeugt ein Hänger einen **falschen Glauben über den Zustand**;
+  überall sonst sieht der Nutzer einen Spinner.
+- **feat (Escape-Hatch):** Optionen-Durchreichung auf `destroy()` sowie auf den
+  REST-Helpern `create/update/save/delete` — lange Einzel-Calls heben ihr Limit
+  selbst an: `api.admin.create('imports', objekt, true, { timeout: 300_000 })`.
+  Rein additiv (nachgestellte optionale Parameter), bestehende Aufrufe unverändert.
+- **test:** `npm run test:api-timeout` — erster Unit-Test im Layer (`node --test`,
+  **keine neue Dependency**). Stellt eine **echte nie-settlende** Verbindung her
+  (Promise, die nur auf `abort` reagiert — kein sofortiger Reject, der auch ohne
+  Fix bestünde). Gegenprobe gefahren: jeder der drei Fix-Teile einzeln entfernt
+  → genau ein Test wird rot.
+
 ## v0.3.1 — 2026-07-06
 
 **🔒 Security-Fix: keine Credentials mehr in der Browser-Konsole.** Der Layer-Logger

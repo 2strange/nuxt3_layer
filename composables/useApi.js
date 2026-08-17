@@ -1,4 +1,5 @@
 import { apiPath, backendPath, adminPath, sendOptions, sendObjekt } from '~/utils/api'
+import { apiTimeoutFrom } from '~/utils/apiTimeouts'
 import { log } from '~/services/log'
 
 // Lazily-built ofetch instance with auth headers and base URL.
@@ -11,6 +12,8 @@ function buildFetch() {
 
   return $fetch.create({
     baseURL,
+    // Safety net against stalled connections — see ~/utils/apiTimeouts.
+    timeout: apiTimeoutFrom(config.public),
     onRequest({ options }) {
       // options.headers can be a Headers instance, an array of tuples, or a
       // plain object depending on caller. Normalize via Headers API.
@@ -46,7 +49,7 @@ export function useApi() {
     get:     (path)              => { log.debug('$api GET',    path);     return api(path, { method: 'GET' }) },
     post:    (path, body, opts)  => { log.debug('$api POST',   path, body); return api(path, { method: 'POST',   body, ...(opts || {}) }) },
     put:     (path, body, opts)  => { log.debug('$api PUT',    path, body); return api(path, { method: 'PUT',    body, ...(opts || {}) }) },
-    destroy: (path)              => { log.debug('$api DELETE', path);     return api(path, { method: 'DELETE' }) },
+    destroy: (path, opts)        => { log.debug('$api DELETE', path);     return api(path, { method: 'DELETE', ...(opts || {}) }) },
   }
 
   // REST helpers (default namespace = "")
@@ -54,18 +57,20 @@ export function useApi() {
     return {
       index: (path)                      => raw.get(pathBuilder(locale(), path)),
       show:  (path, objektOrId)          => raw.get(pathBuilder(locale(), path, objektOrId)),
-      create: (path, objekt, fileForm = false) => {
+      // `opts` is the escape hatch for calls that must outlive the instance
+      // timeout — e.g. a big multipart upload on a slow line: create(path, obj, true, { timeout: 300_000 }).
+      create: (path, objekt, fileForm = false, opts = {}) => {
         const data = { obj: { objekt }, fileForm }
-        return raw.post(pathBuilder(locale(), path), sendObjekt(data), sendOptions(fileForm))
+        return raw.post(pathBuilder(locale(), path), sendObjekt(data), { ...sendOptions(fileForm), ...opts })
       },
-      update: (path, objekt, fileForm = false) => {
+      update: (path, objekt, fileForm = false, opts = {}) => {
         const data = { obj: { objekt }, fileForm }
-        return raw.put(pathBuilder(locale(), path, objekt), sendObjekt(data), sendOptions(fileForm))
+        return raw.put(pathBuilder(locale(), path, objekt), sendObjekt(data), { ...sendOptions(fileForm), ...opts })
       },
-      save(path, objekt, fileForm = false) {
-        return objekt.id ? this.update(path, objekt, fileForm) : this.create(path, objekt, fileForm)
+      save(path, objekt, fileForm = false, opts = {}) {
+        return objekt.id ? this.update(path, objekt, fileForm, opts) : this.create(path, objekt, fileForm, opts)
       },
-      delete: (path, objektOrId)         => raw.destroy(pathBuilder(locale(), path, objektOrId)),
+      delete: (path, objektOrId, opts)   => raw.destroy(pathBuilder(locale(), path, objektOrId), opts),
     }
   }
 

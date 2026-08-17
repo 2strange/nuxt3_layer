@@ -1,4 +1,5 @@
 import { log } from '~/services/log'
+import { logoutTimeoutFrom } from '~/utils/apiTimeouts'
 
 // Auth flow tailored for the Rails JWT backend used by the old @nuxtjs/auth
 // setup: POST auth/login -> token in `token` field, GET auth/user -> user object,
@@ -61,7 +62,11 @@ export function useAuth() {
   async function logout() {
     try {
       // Devise path_names in this project: { sign_out: 'logout' }
-      if (auth.token) await api.destroy('auth/logout')
+      // Tighter than the instance default: a stalled logout makes the user
+      // believe they are signed out while the session stays open. The finally
+      // below only runs once this request settles. See ~/utils/apiTimeouts.
+      const timeout = logoutTimeoutFrom(useRuntimeConfig()?.public)
+      if (auth.token) await api.destroy('auth/logout', { timeout })
     } catch (err) {
       log.warn('logout endpoint failed (ignored):', err?.message || String(err))
     } finally {

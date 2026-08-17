@@ -77,6 +77,18 @@ export default defineNuxtConfig({
       // Empty default = consumers MUST set it (NUXT_PUBLIC_SITE_URL) to get
       // absolute SEO URLs; otherwise canonical/OG fall back to relative paths.
       siteUrl: '',
+      // Fallback request timeout in ms for the shared useApi() fetch instance.
+      // A safety net against stalled connections (ofetch only builds an
+      // AbortController when `timeout` is set — without it a stalled request
+      // leaves a promise that never settles). Generous on purpose: it must sit
+      // above the slowest legitimate request INCLUDING upload time. Lower it
+      // per project (NUXT_PUBLIC_API_TIMEOUT) if you know your profile; raise
+      // single calls via the per-call `timeout` option instead of this value.
+      apiTimeout: 120000,
+      // Tighter limit for DELETE auth/logout only: a stalled logout makes the
+      // user believe they are signed out while the session stays open. Clamped
+      // to apiTimeout — it can only ever shorten, never lengthen.
+      apiLogoutTimeout: 10000,
     },
     apiBaseServer: '',
     // A2 Content-Refresh (opt-in): token that guards server/api/_purge.

@@ -1,6 +1,6 @@
 {
   "name": "nuxt3-layer",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Shared Nuxt 3 base layer \u2014 auth, Vuetify 3, Pinia, helpers, composables. Extend via `extends: ['../nuxt3_layer']` in your project's nuxt.config.ts.",
@@ -10,6 +10,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "verify:purge": "bash test/run-purge-verify.sh",
+    "test:api-timeout": "node --import ./test/api-timeout/register-hooks.mjs --test test/api-timeout/hang.test.mjs",
     "postinstall": "if command -v nuxt >/dev/null; then nuxt prepare; fi"
   },
   "a2ContentRefresh": {

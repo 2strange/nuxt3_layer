@@ -127,6 +127,36 @@ export default defineNuxtConfig({
 })
 ```
 
+#### Request-Timeouts (`apiTimeout` / `apiLogoutTimeout`)
+
+Der Layer setzt auf der geteilten `useApi()`-Instanz einen **Fallback-Timeout**
+(Default `apiTimeout: 120000` ms). Das ist ein Sicherheitsnetz, kein Performance-
+Budget: `ofetch` legt einen `AbortController` **nur** an, wenn `timeout` gesetzt
+ist — ohne ihn bleibt ein Request, dessen Verbindung mitten drin hängt, für immer
+pending. Kein `catch`, kein `finally`, kein Fehler; Spinner drehen ewig und
+`finally`-Blöcke (State-Reset, Loading-Flags) laufen nie.
+
+Das Fenster deckt Server-Denkzeit **und den Upload des Request-Bodies** ab (es
+wird beendet, sobald die Response-Header da sind — große Downloads sind also
+nicht betroffen). Der Default muss deshalb über dem langsamsten legitimen Upload
+des Projekts liegen. Wer sein Profil kennt, senkt ihn per
+`NUXT_PUBLIC_API_TIMEOUT`; einzelne lange Calls heben ihn **pro Aufruf** an:
+
+```js
+const api = useApi()
+await api.post(path, body, { timeout: 300_000 })          // roher Verb
+await api.admin.create('imports', objekt, true, { timeout: 300_000 })  // REST-Helper
+```
+
+`apiLogoutTimeout` (Default `10000` ms) gilt **nur** für `DELETE auth/logout` in
+`useAuth().logout()`: ein hängendes Abmelden lässt den Nutzer glauben, er sei
+abgemeldet, während die Sitzung offen bleibt — überall sonst sieht er einen
+Spinner und weiß, dass nichts fertig ist. Der Wert wird auf `apiTimeout`
+geklemmt, kann also nur verkürzen, nie verlängern.
+
+Verifikation: `npm run test:api-timeout` (stellt eine echte nie-settlende
+Verbindung her, kein sofortiger Reject).
+
 ### 3. (Optional) Projektspezifische `app.config.ts`
 
 ```ts
