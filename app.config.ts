@@ -28,6 +28,21 @@ export default defineAppConfig({
     de: 'Deutsch',
     en: 'English',
   },
+  // Session keeping (v0.5.0, see utils/authSession.js). Zero-config = old
+  // behaviour except: with <AuthReloginDialog> mounted (layer layouts do it),
+  // a 401 / expired token opens a re-login dialog over the page instead of
+  // redirecting, and the waiting requests are retried afterwards.
+  auth: {
+    loginPath: '/crew/login',
+    // Backend endpoint answering { token } for the current user (devise-jwt
+    // dispatch_requests), e.g. 'auth/refresh'. Empty = no sliding refresh.
+    refreshPath: '',
+    // Renew once this share of the token lifetime has passed and the user was active.
+    refreshAt: 0.5,
+    // false = keep the old 401 behaviour (reset + redirect to /403).
+    reloginDialog: true,
+  },
+
   // Name of the cookie-consent cookie (read/written by useAppStore).
   // Default = historical hardcoded value, so existing apps keep recognizing
   // already-set consent cookies without any config (zero-config drop-in).

@@ -14,7 +14,12 @@
     "wrongCredentials": "Wrong credentials",
     "loginError": "Login failed",
     "loggedIn": "Signed in",
-    "loggedOut": "Signed out"
+    "loggedOut": "Signed out",
+    "reloginTitle": "Please sign in again",
+    "reloginExpired": "Your session has expired. Sign in again – your input is kept.",
+    "reloginText": "This action needs a fresh sign-in. Your input is kept.",
+    "reloginButton": "Continue",
+    "reloginLogout": "Sign out"
   },
   "actions": {
     "confirm": {

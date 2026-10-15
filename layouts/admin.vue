@@ -22,6 +22,7 @@
     </v-main>
 
     <AppToast />
+    <AuthReloginDialog />
   </v-app>
 </template>
 

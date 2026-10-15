@@ -3,6 +3,43 @@
 Alle nennenswerten Änderungen am Layer. Konsumprojekte pinnen am besten auf den
 jeweiligen Release-Tag (`extends: ['github:2strange/nuxt3_layer#v0.1.2']`).
 
+## v0.5.0 — 2026-10-15
+
+**Session bleibt, Eingaben bleiben: gleitender Token-Refresh + Re-Login an Ort und Stelle.**
+Bisher lief das JWT eine feste Zeit nach dem Login ab (devise-jwt, z. B. 6 h). Der erste
+Request danach bekam 401, `useApi` setzte die Auth zurück und leitete auf `/403` — alles,
+was nur im Speicher lag (Formulare, Unterschriften), war weg. (Gemeldet von KeyHub: Kunde
+verliert Formulare + Unterschriften.)
+
+- **feat (Re-Login-Dialog):** neue Komponente `<AuthReloginDialog />` (in den drei
+  Layer-Layouts eingebaut). Ein **abgelaufenes Token** oder ein **401** öffnet einen Dialog
+  **über** der Seite statt eines Redirects. Alle in der Zwischenzeit mit 401 gescheiterten
+  Requests warten hinter **einem** Dialog und werden nach dem Re-Login **einmal wiederholt**
+  (401 = Server hat nichts verarbeitet → kein Doppel-Submit). Meldet sich ein **anderer**
+  User an, werden die wartenden Requests verworfen und die Seite neu geladen. „Abmelden"
+  im Dialog = alter Weg (Reset + Login-Seite). 402/403 und Login-/Logout-Fehler: unverändert.
+- **feat (Sliding Refresh, opt-in):** mit `auth.refreshPath` in `app.config.ts` (z. B.
+  `'auth/refresh'`) tauscht der Layer das Token aus, sobald `auth.refreshAt` (Default 0.5)
+  der Laufzeit vorbei ist **und** der Nutzer seit der Ausgabe aktiv war. Aktivität =
+  echte Interaktion (Pointer/Tastatur/Touch/Scroll), nicht nur Requests — wer 20 min an
+  einer Unterschrift malt, bleibt drin. Wer inaktiv ist, läuft nach der Token-Laufzeit
+  regulär aus (= Inaktivitäts-Limit, serverseitig über `jwt.expiration_time` gesteuert).
+  Mehrere Tabs teilen sich das Cookie: ein Tab übernimmt ein neueres Token desselben
+  Users statt abzulaufen. Backend-Gegenstück: api_generator `POST /api/auth/refresh`.
+- **feat:** `useAuth()` hat neu `refreshToken()` und `reloginLocal()`. `useApi().get(path, opts)`
+  nimmt jetzt optionale Fetch-Optionen; `authRedirect: false` = Aufrufer behandelt
+  Auth-Fehler selbst (kein Reset/Redirect/Dialog).
+- **Drop-in-sicher, keine neue Config nötig:** Ohne gemounteten `<AuthReloginDialog />`
+  (eigene Layouts, die ihn noch nicht einbinden) verhält sich ein 401 **exakt wie bisher**.
+  Ohne `auth.refreshPath` gibt es keinen Refresh. `auth.reloginDialog: false` schaltet den
+  Dialog explizit ab. `auth.loginPath` (Default `/crew/login`) ersetzt den bisher
+  hartkodierten Pfad.
+- **Konsumenten mit eigenen Layouts:** `<AuthReloginDialog />` neben `<AppToast />`
+  einfügen. Für den Refresh zusätzlich `auth: { refreshPath: 'auth/refresh' }` in die
+  `app.config.ts` + Backend-Endpoint (siehe api_generator / README §Session).
+- **test:** `npm run test:auth-session` (15 Fälle: Warten + Retry, ein Dialog für parallele
+  401s, Abbruch, anderer User, Auth-Endpunkte, 402/403, Opt-out, Refresh, Zero-Config).
+
 ## v0.4.0 — 2026-08-18
 
 **Hänge-Fix: `useApi()` kann nicht mehr ewig pending bleiben.** Die geteilte
