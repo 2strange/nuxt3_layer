@@ -317,6 +317,48 @@ laufende Prod-/Staging-Instanz.
 
 ---
 
+## Session: Token-Refresh + Re-Login an Ort und Stelle — seit v0.5.0
+
+Ziel: Ein abgelaufenes JWT kostet **keine Eingaben** mehr (Formulare, Unterschriften).
+
+**Ohne Config** (nur Layer-Update): Läuft das Token ab oder kommt ein 401, erscheint
+`<AuthReloginDialog />` über der Seite; nach dem Re-Login werden die wartenden Requests
+wiederholt. Voraussetzung: der Dialog ist im Layout gemountet — die Layer-Layouts tun das,
+eigene Layouts ergänzen ihn neben `<AppToast />`. Ohne Dialog bleibt alles wie vorher.
+
+**Mit Refresh** (empfohlen) — Nutzer, die aktiv sind, fliegen gar nicht erst raus:
+
+```ts
+// app.config.ts
+export default defineAppConfig({
+  auth: {
+    refreshPath: 'auth/refresh', // Backend: POST → { token } für den aktuellen User
+    refreshAt: 0.5,              // erneuern nach 50 % der Token-Laufzeit (bei Aktivität)
+    // loginPath: '/crew/login', // Ziel von „Abmelden" im Dialog
+    // reloginDialog: false,     // altes 401-Verhalten erzwingen
+  },
+})
+```
+
+**Backend (Rails, devise-jwt)** — siehe `api_generator`-Template:
+
+```ruby
+# config/initializers/devise.rb → config.jwt do |jwt|
+jwt.dispatch_requests = [['POST', %r{^/api/(?:(?:de|en)/)?auth/refresh$}]]
+
+# config/routes.rb → namespace :api … namespace :auth
+post :refresh, to: "user#refresh"
+
+# Api::Auth::UserController
+def refresh
+  render json: { token: current_user.current_token } # gesetzt in User#on_jwt_dispatch
+end
+```
+
+Bei **JTIMatcher** bleibt der `jti` gleich (andere Geräte bleiben angemeldet), bei
+**Allowlist** entsteht ein neuer Eintrag; das alte Token läuft regulär aus.
+Inaktivitäts-Limit = `jwt.expiration_time` (kein Refresh ohne Aktivität).
+
 ## SEO + JSON-LD (`useSeo` / `useJsonLd`) — seit v0.2.0, ausgebaut in v0.3.0
 
 Zwei generische Composables für Meta-Tags und schema.org-Strukturdaten. **Lean,

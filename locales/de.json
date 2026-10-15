@@ -14,7 +14,12 @@
     "wrongCredentials": "Falsche Zugangsdaten",
     "loginError": "Fehler beim Anmelden",
     "loggedIn": "Du bist angemeldet",
-    "loggedOut": "Abgemeldet"
+    "loggedOut": "Abgemeldet",
+    "reloginTitle": "Bitte erneut anmelden",
+    "reloginExpired": "Deine Sitzung ist abgelaufen. Melde dich kurz neu an – deine Eingaben bleiben erhalten.",
+    "reloginText": "Für diese Aktion ist eine neue Anmeldung nötig. Deine Eingaben bleiben erhalten.",
+    "reloginButton": "weiter",
+    "reloginLogout": "Abmelden"
   },
   "actions": {
     "confirm": {

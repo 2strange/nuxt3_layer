@@ -54,8 +54,8 @@ fehlt**. On-Demand-Port wenn ein Konsumprojekt es braucht:
 
 - [ ] **CSP-Header** als optionales Setup dokumentieren (gegen XSS-Token-Klau,
   siehe `README.md` → Sicherheit-Sektion). Ggf. `nuxt-security` Modul prüfen.
-- [ ] **Refresh-Token-Flow** evaluieren — aktuell rauschen User mit 401 raus
-  wenn der JWT abläuft. Sinnvoll? Hängt von Token-Lifetime im Rails ab.
+- [x] **Refresh-Token-Flow** — v0.5.0 (2026-10-15): Sliding Refresh (`auth.refreshPath`)
+  + Re-Login-Dialog in place statt 401-Redirect (KeyHub-Fund: verlorene Formulare/Unterschriften).
 - [ ] **Optional: httpOnly-Auth via Server-Routes** — Bearer-Token aus
   httpOnly-Cookie auf Nuxt-Server-Seite lesen + an Rails weiterreichen. Macht
   XSS-Token-Klau unmöglich, aber großer Umbau.

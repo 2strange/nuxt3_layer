@@ -46,7 +46,11 @@ Bei Breaking Changes → in der README + BACKLOG notieren, Major-Version bumpen.
 - **API-Client:** `useApi()` baut ein `$fetch.create()` mit Bearer-Header,
   Rails-REST-Pattern (`index/show/create/update/save/delete`) + Namespaces
   `.backend` und `.admin` (zu den Rails-Routes `/api/backend/...` und
-  `/api/admin/...`). 401/402/403 → automatischer State-Reset + Redirect /403.
+  `/api/admin/...`). 402/403 → State-Reset + Redirect /403. **401 (seit v0.5.0)**
+  → `<AuthReloginDialog>` über der Seite + Retry der wartenden Requests, sofern der
+  Dialog gemountet ist (sonst wie früher Reset + Redirect). Sliding Refresh opt-in über
+  `app.config` `auth.refreshPath`. Logik in `utils/authSession.js` (plain JS, getestet:
+  `npm run test:auth-session`), Client-Teil `plugins/auth-session.client.js`.
 - **Boundary:** Request-Bodies wrappen die Daten in `{ objekt: {...} }`
   (geerbt vom Rails-`api_params`-Pattern); Responses kommen JSON:API-formatiert
   zurück und werden durch `utils/decoder.js` (`assignResponseNested`) entpackt.
@@ -58,9 +62,9 @@ Bei Breaking Changes → in der README + BACKLOG notieren, Major-Version bumpen.
   `locales/`-Layout). de+en als Default; Projekte ergänzen eigene Keys.
 - **Toast:** eigenes `useToast()`-Composable + `<AppToast>` Component (nutzt
   `v-snackbar`). Ersatz für das alte `@nuxtjs/toast` aus Nuxt 2.
-- **Components (auto-importiert, 8 Stück):** `AdminFooter`, `AppSpinner`,
-  `AppToast`, `EmptyMsg`, `JsonDebug`, `LanguageSwitcher`, `RichTextEditor`,
-  `ToolBar`. Alle generisch — projektspezifische Components gehören ins
+- **Components (auto-importiert, 9 Stück):** `AdminFooter`, `AppSpinner`,
+  `AppToast`, `AuthReloginDialog`, `EmptyMsg`, `JsonDebug`, `LanguageSwitcher`,
+  `RichTextEditor`, `ToolBar`. Alle generisch — projektspezifische Components gehören ins
   Konsumprojekt.
 - **Config:** `useConfig()` liest aus Nuxts `useAppConfig()` (merged Layer +
   Projekt) und `useRuntimeConfig().public`. Projekte überschreiben in ihren
@@ -124,7 +128,7 @@ Bei Breaking Changes → in der README + BACKLOG notieren, Major-Version bumpen.
   (`index/show/create/update/save/delete`).
 - Selbe Boundary wie überall: Bodies in `{ objekt: {...} }`, camelCase ↔
   snake_case Konvertierung im Backend, JSON:API-Decoding via `utils/decoder.js`.
-- Auth-Fehler (401/402/403) → automatischer Reset + Redirect zu `/403?back=...`.
+- Auth-Fehler 402/403 → automatischer Reset + Redirect zu `/403?back=...`; 401 → Re-Login-Dialog (s. o.).
 
 ## Don't
 

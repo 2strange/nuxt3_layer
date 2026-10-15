@@ -1,4 +1,5 @@
 import { log } from '~/services/log'
+import { authConfig, tokenTimes } from '~/utils/authSession'
 
 // Auth flow tailored for the Rails JWT backend used by the old @nuxtjs/auth
 // setup: POST auth/login -> token in `token` field, GET auth/user -> user object,
@@ -33,11 +34,11 @@ export function useAuth() {
     }
   }
 
-  async function fetchUser() {
+  async function fetchUser(opts) {
     if (!auth.token) return null
     try {
-      const resp = await api.get('auth/user')
-      log.info('[auth] /auth/user response', resp)
+      const resp = await api.get('auth/user', opts)
+      log.info('[auth] /auth/user response received') // never log the response (PII/token)
       // Rails returns a flat hash (get_user_json) — no { data: ... } wrapper.
       // But also handle JSON:API-style responses just in case.
       const userData = resp?.data?.attributes
@@ -68,9 +69,63 @@ export function useAuth() {
     }
   }
 
+  // Sliding refresh (v0.5.0): swap the token for a fresh one while the user is
+  // active. Needs `auth.refreshPath` in app.config (e.g. 'auth/refresh'), which
+  // the backend answers like login: { token }. Returns true on success.
+  // 401 = token already dead → the caller (session plugin) opens the re-login dialog.
+  async function refreshToken() {
+    const { refreshPath } = authConfig(typeof useAppConfig === 'function' ? useAppConfig() : null)
+    if (!refreshPath || !auth.token) return false
+    try {
+      const resp = await api.post(refreshPath, {}, { authRedirect: false })
+      const token = resp?.token || resp?.data?.token
+      if (!token) return false
+      auth.setToken(token)
+      log.info('[auth] token refreshed')
+      return true
+    } catch (err) {
+      const status = err?.response?.status ?? err?.statusCode ?? err?.status
+      log.warn('[auth] refresh failed:', status || err?.message || String(err))
+      if (status === 401) throw err
+      return false
+    }
+  }
+
+  // Re-login from <AuthReloginDialog>: like loginLocal, but keeps the current
+  // user on failure (the dialog stays open) and reports whether the SAME user
+  // signed in again — only then may the waiting requests be retried.
+  // Returns 'same' | 'other'. Throws on wrong credentials.
+  async function reloginLocal({ email, password, realm }) {
+    const previousId = auth.user?.id ?? tokenTimes(auth.token)?.sub ?? null
+    auth.loading = true
+    auth.lastError = null
+    try {
+      const userPayload = { email, password }
+      if (realm) userPayload.realm = realm
+      const resp = await api.post('auth/login', { user: userPayload }, { authRedirect: false })
+      const token = resp?.token || resp?.data?.token
+      if (!token) throw new Error('No token in login response')
+      auth.setToken(token)
+      // authRedirect:false — a 401 here must not wait for the very dialog we're in.
+      const user = await fetchUser({ authRedirect: false })
+      const newId = user?.id ?? tokenTimes(token)?.sub ?? null
+      const same = previousId == null || newId == null || String(previousId) === String(newId)
+      log.info('[auth] re-login', same ? 'same user' : 'OTHER user')
+      return same ? 'same' : 'other'
+    } catch (err) {
+      log.warn('[auth] re-login failed:', err?.message || String(err)) // message only — may echo secrets
+      auth.lastError = err
+      throw err
+    } finally {
+      auth.loading = false
+    }
+  }
+
   return {
     auth,
     loginLocal,
+    reloginLocal,
+    refreshToken,
     fetchUser,
     logout,
   }
