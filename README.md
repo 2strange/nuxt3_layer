@@ -343,21 +343,32 @@ export default defineAppConfig({
 **Backend (Rails, devise-jwt)** — siehe `api_generator`-Template:
 
 ```ruby
-# config/initializers/devise.rb → config.jwt do |jwt|
-jwt.dispatch_requests = [['POST', %r{^/api/(?:(?:de|en)/)?auth/refresh$}]]
-
 # config/routes.rb → namespace :api … namespace :auth
 post :refresh, to: "user#refresh"
 
-# Api::Auth::UserController
+# Api::Auth::UserController (before_action :authenticate_user!)
 def refresh
-  render json: { token: current_user.current_token } # gesetzt in User#on_jwt_dispatch
+  payload = Warden::JWTAuth::TokenDecoder.new.call(Warden::JWTAuth::HeaderParser.from_env(request.env))
+  current_user.jwt_auth_time = Time.at((payload['auth_time'] || payload['iat']).to_i) # Login-Zeit mitnehmen
+  token, new_payload = Warden::JWTAuth::UserEncoder.new.call(current_user, :user, Warden::JWTAuth::EnvHelper.aud_header(request.env))
+  current_user.on_jwt_dispatch(token, new_payload) # Allowlist: neuer Eintrag
+  render json: { token: token }
 end
 ```
+
+⚠️ Den Refresh-Pfad **nicht** in `jwt.dispatch_requests` eintragen: Auf Dispatch-Pfaden
+ignoriert die JWT-Strategie den Bearer-Header, `authenticate_user!` antwortet dann immer 401.
 
 Bei **JTIMatcher** bleibt der `jti` gleich (andere Geräte bleiben angemeldet), bei
 **Allowlist** entsteht ein neuer Eintrag; das alte Token läuft regulär aus.
 Inaktivitäts-Limit = `jwt.expiration_time` (kein Refresh ohne Aktivität).
+
+**Absolutes Limit (optional, Backend):** `jwt_max_session_age` in `configuration.yml`
+(api_generator-Template, z. B. `604800` = 7 Tage). `User#jwt_payload` schreibt die
+Login-Zeit als `auth_time`-Claim ins Token, der Refresh trägt sie weiter und kappt `exp`
+bei Login + Limit. Danach öffnet sich der Re-Login-Dialog, auch für aktive Nutzer. Der
+Layer braucht dafür keine Config: Verlängert ein Refresh `exp` nicht mehr, hört er auf zu
+refreshen und lässt das Token regulär auslaufen.
 
 ## SEO + JSON-LD (`useSeo` / `useJsonLd`) — seit v0.2.0, ausgebaut in v0.3.0
 
