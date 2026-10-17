@@ -62,8 +62,12 @@ export function tokenTimes(token) {
 
 // Refresh when the user was active since the token was issued and the
 // configured share of its lifetime has passed. Times in seconds.
-export function shouldRefresh({ iat, exp }, { now, lastActivity, refreshAt = 0.5 }) {
+// `noGainExp`: exp of a refreshed token that did NOT outlive its predecessor —
+// the backend's absolute session limit was reached (api_generator
+// jwt_max_session_age), refreshing again can't help, so stop until the next login.
+export function shouldRefresh({ iat, exp }, { now, lastActivity, refreshAt = 0.5, noGainExp = 0 }) {
   if (!exp || exp <= now) return false
+  if (noGainExp && exp <= noGainExp) return false
   const issued = iat ?? exp - 3600
   const lifetime = exp - issued
   if (lifetime <= 0) return false

@@ -74,6 +74,14 @@ test('refresh only for an active user after the configured share of the lifetime
   assert.equal(shouldRefresh(times, { now: 1000 + 5500, lastActivity: 1000 + 5400, refreshAt: 0.25 }), true, 'refreshAt is configurable')
 })
 
+test('absolute session limit: no refresh loop once exp stops growing', () => {
+  // backend capped exp at login + max age → refreshed token ends where the old one did
+  const capped = { iat: 5000, exp: 6000 }
+  assert.equal(shouldRefresh(capped, { now: 5600, lastActivity: 5590 }), true, 'without the marker it would refresh again')
+  assert.equal(shouldRefresh(capped, { now: 5600, lastActivity: 5590, noGainExp: 6000 }), false, 'limit reached → let it expire')
+  assert.equal(shouldRefresh({ iat: 7000, exp: 28600 }, { now: 18000, lastActivity: 17990, noGainExp: 6000 }), true, 'new login (later exp) refreshes again')
+})
+
 test('login/logout/refresh calls are never answered with the dialog', () => {
   assert.equal(isAuthEndpoint('auth/login'), true)
   assert.equal(isAuthEndpoint('/api/auth/logout'), true)

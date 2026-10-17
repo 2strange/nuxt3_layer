@@ -8,6 +8,8 @@
 //   otherwise nothing changes; the next request 401s as before).
 // • Several tabs share the auth cookie: a newer token of the SAME user that
 //   another tab refreshed is adopted instead of expiring here.
+// • Absolute session limit (backend): a refresh that doesn't extend exp stops
+//   further refreshes; at exp the re-login dialog opens as usual.
 import { log } from '~/services/log'
 import {
   AUTH_COOKIE, authConfig, finishRelogin, readCookieToken, reloginAvailable,
@@ -26,6 +28,7 @@ export default defineNuxtPlugin(() => {
   let lastActivity = Date.now() / 1000
   let lastMark = 0
   let refreshing = false
+  let noGainExp = 0 // see shouldRefresh — set when the session limit is reached
 
   function adoptNewerCookieToken() {
     const cookieToken = readCookieToken(document.cookie, AUTH_COOKIE)
@@ -53,11 +56,14 @@ export default defineNuxtPlugin(() => {
       return
     }
     if (refreshing || !cfg().refreshPath) return
-    if (!shouldRefresh(times, { now, lastActivity, refreshAt: Number(cfg().refreshAt) || 0.5 })) return
+    if (!shouldRefresh(times, { now, lastActivity, refreshAt: Number(cfg().refreshAt) || 0.5, noGainExp })) return
 
     refreshing = true
     try {
-      await refreshToken()
+      if (await refreshToken()) {
+        const fresh = tokenTimes(auth.token)
+        if (fresh && fresh.exp <= times.exp) noGainExp = fresh.exp
+      }
     } catch {
       // 401 on refresh: the token is already dead server-side (revoked/expired).
       if (reloginAvailable() && auth.user && cfg().reloginDialog !== false) requestRelogin('expired')
