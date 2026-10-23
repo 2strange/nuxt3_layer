@@ -336,6 +336,7 @@ export default defineAppConfig({
     refreshAt: 0.5,              // erneuern nach 50 % der Token-Laufzeit (bei Aktivität)
     // loginPath: '/crew/login', // Ziel von „Abmelden" im Dialog
     // reloginDialog: false,     // altes 401-Verhalten erzwingen
+    // unmanagedClaims: ['kiosk_session'], // Tokens mit diesem Claim verwaltet die App selbst
   },
 })
 ```
@@ -362,6 +363,11 @@ ignoriert die JWT-Strategie den Bearer-Header, `authenticate_user!` antwortet da
 Bei **JTIMatcher** bleibt der `jti` gleich (andere Geräte bleiben angemeldet), bei
 **Allowlist** entsteht ein neuer Eintrag; das alte Token läuft regulär aus.
 Inaktivitäts-Limit = `jwt.expiration_time` (kein Refresh ohne Aktivität).
+
+**Eigene Token-Arten (z. B. Kiosk/Tablet):** Trägt ein Token einen der Claims aus
+`auth.unmanagedClaims`, lässt der Layer es komplett in Ruhe: kein Refresh, kein
+Re-Login-Dialog, keine Übernahme aus anderen Tabs, ein 401 läuft wie vor v0.5.0
+(Reset + Redirect bzw. eigene Behandlung mit `authRedirect: false`).
 
 **Absolutes Limit (optional, Backend):** `jwt_max_session_age` in `configuration.yml`
 (api_generator-Template, z. B. `604800` = 7 Tage). `User#jwt_payload` schreibt die

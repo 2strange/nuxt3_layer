@@ -8,11 +8,12 @@
 //   otherwise nothing changes; the next request 401s as before).
 // • Several tabs share the auth cookie: a newer token of the SAME user that
 //   another tab refreshed is adopted instead of expiring here.
+// • Tokens with one of `auth.unmanagedClaims` (e.g. kiosk) are left alone.
 // • Absolute session limit (backend): a refresh that doesn't extend exp stops
 //   further refreshes; at exp the re-login dialog opens as usual.
 import { log } from '~/services/log'
 import {
-  AUTH_COOKIE, authConfig, finishRelogin, readCookieToken, reloginAvailable,
+  AUTH_COOKIE, authConfig, finishRelogin, isManagedToken, readCookieToken, reloginAvailable,
   reloginState, requestRelogin, shouldRefresh, tokenTimes,
 } from '~/utils/authSession'
 
@@ -36,6 +37,7 @@ export default defineNuxtPlugin(() => {
     const mine = tokenTimes(auth.token)
     const theirs = tokenTimes(cookieToken)
     if (!theirs || (mine && theirs.exp <= mine.exp)) return false
+    if (!isManagedToken(cookieToken, cfg())) return false // app-managed token (e.g. kiosk) — not ours to adopt
     if (mine?.sub && theirs.sub && mine.sub !== theirs.sub) return false // another user signed in elsewhere
     auth.token = cookieToken
     log.info('[auth] adopted newer token from another tab')
@@ -43,7 +45,7 @@ export default defineNuxtPlugin(() => {
   }
 
   async function tick() {
-    if (!auth.token) return
+    if (!auth.token || !isManagedToken(auth.token, cfg())) return
     const adopted = adoptNewerCookieToken()
     if (adopted && reloginState.open && reloginState.reason === 'expired') finishRelogin(true)
 

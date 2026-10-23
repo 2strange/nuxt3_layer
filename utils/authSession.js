@@ -29,6 +29,10 @@ export const AUTH_DEFAULTS = {
   refreshAt: 0.5,
   // false = keep the old 401 behaviour (reset + redirect) even with the dialog mounted.
   reloginDialog: true,
+  // Tokens carrying one of these claims belong to the app, not to the session
+  // keeper: no refresh, no re-login dialog, a 401 behaves as before. E.g. a
+  // kiosk/device token with its own lifecycle: ['kiosk_session'].
+  unmanagedClaims: [],
 }
 
 export function authConfig(appConfig) {
@@ -58,6 +62,14 @@ export function tokenTimes(token) {
   if (!p || typeof p.exp !== 'number') return null
   const iat = typeof p.iat === 'number' ? p.iat : null
   return { iat, exp: p.exp, sub: p.sub != null ? String(p.sub) : null }
+}
+
+// false when the token carries one of `auth.unmanagedClaims` (truthy value).
+export function isManagedToken(token, cfg = AUTH_DEFAULTS) {
+  const claims = Array.isArray(cfg?.unmanagedClaims) ? cfg.unmanagedClaims : []
+  if (!claims.length) return true
+  const p = decodeJwtPayload(token)
+  return !p || !claims.some((c) => !!p[c])
 }
 
 // Refresh when the user was active since the token was issued and the

@@ -1,6 +1,6 @@
 import { apiPath, backendPath, adminPath, sendOptions, sendObjekt } from '~/utils/api'
 import { log } from '~/services/log'
-import { authConfig, isAuthEndpoint, reloginAvailable, requestRelogin } from '~/utils/authSession'
+import { authConfig, isAuthEndpoint, isManagedToken, reloginAvailable, requestRelogin } from '~/utils/authSession'
 
 function appAuthConfig() {
   return authConfig(typeof useAppConfig === 'function' ? useAppConfig() : null)
@@ -8,7 +8,8 @@ function appAuthConfig() {
 
 // A 401 goes to the re-login dialog (instead of reset + redirect) when the
 // dialog is mounted, the user was signed in, it isn't a login/logout/refresh
-// call and the caller didn't opt out (`authRedirect: false` = handle it yourself).
+// call, the caller didn't opt out (`authRedirect: false` = handle it yourself)
+// and the token isn't app-managed (`auth.unmanagedClaims`).
 function reloginHandles(path, options, authStore) {
   const cfg = appAuthConfig()
   return cfg.reloginDialog !== false
@@ -16,6 +17,7 @@ function reloginHandles(path, options, authStore) {
     && !!authStore.user
     && options?.authRedirect !== false
     && !isAuthEndpoint(path, cfg.refreshPath)
+    && isManagedToken(authStore.token, cfg)
 }
 
 // Lazily-built ofetch instance with auth headers and base URL.
