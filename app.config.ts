@@ -34,8 +34,8 @@ export default defineAppConfig({
   // redirecting, and the waiting requests are retried afterwards.
   auth: {
     loginPath: '/crew/login',
-    // Backend endpoint answering { token } for the current user (devise-jwt
-    // dispatch_requests), e.g. 'auth/refresh'. Empty = no sliding refresh.
+    // Backend endpoint answering { token } for the current user, e.g.
+    // 'auth/refresh' (api_generator template). Empty = no sliding refresh.
     refreshPath: '',
     // Renew once this share of the token lifetime has passed and the user was active.
     refreshAt: 0.5,
