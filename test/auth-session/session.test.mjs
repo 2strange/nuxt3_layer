@@ -7,7 +7,7 @@ import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { createFetch } from 'ofetch'
 import {
-  decodeJwtPayload, tokenTimes, shouldRefresh, isAuthEndpoint, readCookieToken,
+  decodeJwtPayload, tokenTimes, shouldRefresh, isAuthEndpoint, isManagedToken, readCookieToken,
   reloginState, finishRelogin, reloginPending,
 } from '../../utils/authSession.js'
 import { useApi } from '../../composables/useApi.js'
@@ -82,6 +82,15 @@ test('absolute session limit: no refresh loop once exp stops growing', () => {
   assert.equal(shouldRefresh({ iat: 7000, exp: 28600 }, { now: 18000, lastActivity: 17990, noGainExp: 6000 }), true, 'new login (later exp) refreshes again')
 })
 
+test('auth.unmanagedClaims: app-managed tokens (e.g. kiosk) are left alone', () => {
+  const kiosk = jwt({ sub: '7', exp: 9999999999, kiosk_session: true })
+  const normal = jwt({ sub: '7', exp: 9999999999 })
+  assert.equal(isManagedToken(kiosk), true, 'zero-config: every token is managed')
+  assert.equal(isManagedToken(kiosk, { unmanagedClaims: ['kiosk_session'] }), false)
+  assert.equal(isManagedToken(normal, { unmanagedClaims: ['kiosk_session'] }), true)
+  assert.equal(isManagedToken(jwt({ kiosk_session: false }), { unmanagedClaims: ['kiosk_session'] }), true, 'falsy claim = managed')
+})
+
 test('login/logout/refresh calls are never answered with the dialog', () => {
   assert.equal(isAuthEndpoint('auth/login'), true)
   assert.equal(isAuthEndpoint('/api/auth/logout'), true)
@@ -123,6 +132,16 @@ test('with the dialog: a 401 waits for re-login, then the SAME request is retrie
   const posts = calls.filter((c) => c.url === 'api/forms')
   assert.equal(posts.length, 2, 'retried exactly once')
   assert.equal(posts[1].body, posts[0].body, 'same payload re-sent')
+})
+
+test('a 401 with an app-managed token behaves as before, even with the dialog mounted', async () => {
+  const store = install({ token: jwt({ sub: '7', kiosk_session: true }) })
+  appAuth.unmanagedClaims = ['kiosk_session']
+  reloginState.mounted = 1
+  routes['api/forms'] = () => ({ status: 401 })
+  await assert.rejects(useApi().post('api/forms', {}))
+  assert.equal(reloginState.open, false, 'no dialog on the kiosk tablet')
+  assert.equal(store.token, null, 'old path: reset')
 })
 
 test('parallel 401s share ONE dialog and are all retried', async () => {

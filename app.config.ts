@@ -41,6 +41,8 @@ export default defineAppConfig({
     refreshAt: 0.5,
     // false = keep the old 401 behaviour (reset + redirect to /403).
     reloginDialog: true,
+    // Tokens with one of these claims are app-managed (no refresh/dialog), e.g. ['kiosk_session'].
+    unmanagedClaims: [],
   },
 
   // Name of the cookie-consent cookie (read/written by useAppStore).

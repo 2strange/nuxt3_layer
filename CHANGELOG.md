@@ -24,6 +24,8 @@ verliert Formulare + Unterschriften.)
   echte Interaktion (Pointer/Tastatur/Touch/Scroll), nicht nur Requests — wer 20 min an
   einer Unterschrift malt, bleibt drin. Wer inaktiv ist, läuft nach der Token-Laufzeit
   regulär aus (= Inaktivitäts-Limit, serverseitig über `jwt.expiration_time` gesteuert).
+- **feat (`auth.unmanagedClaims`):** Tokens mit einem dieser Claims (z. B. `kiosk_session`)
+  verwaltet die App selbst — kein Refresh, kein Dialog, 401 wie bisher. Default `[]`.
 - **feat (absolutes Session-Limit, Backend-gesteuert):** verlängert ein Refresh `exp`
   nicht mehr (Backend kappt bei Login + `jwt_max_session_age`), refresht der Layer dieses
   Token nicht erneut und lässt es auslaufen → Re-Login-Dialog. Keine Layer-Config nötig.
